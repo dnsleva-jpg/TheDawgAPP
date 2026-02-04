@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "raw-dawg-app",
+    "name": "The Raw Dawg App",
     "slug": "raw-dawg-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -13,7 +13,11 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.anonymous.raw-dawg-app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -25,6 +29,11 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "dd562535-a197-4c5b-9e60-a52837794b7a"
+      }
     }
   }
 }
