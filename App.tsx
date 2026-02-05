@@ -7,8 +7,10 @@ import { ResultsScreen } from './src/screens/ResultsScreen';
 import { Screen, Session } from './src/types';
 import { saveSession } from './src/utils/storage';
 import { getDateString } from './src/utils/stats';
+import { updateStreakAfterSession } from './src/utils/streakManager';
+import { AppLoader } from './src/components/AppLoader';
 
-export default function App() {
+function AppContent() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('Home');
   const [sessionDuration, setSessionDuration] = useState<number>(0);
   const [completedSeconds, setCompletedSeconds] = useState<number>(0);
@@ -51,6 +53,10 @@ export default function App() {
     };
     
     await saveSession(session);
+    
+    // Update streak
+    const updatedStreak = await updateStreakAfterSession();
+    console.log('🔥 Streak updated:', updatedStreak);
     
     // Go to Selfie screen
     setCurrentScreen('Selfie');
@@ -115,5 +121,14 @@ export default function App() {
         />
       )}
     </>
+  );
+}
+
+// Main App component with font loader
+export default function App() {
+  return (
+    <AppLoader>
+      <AppContent />
+    </AppLoader>
   );
 }

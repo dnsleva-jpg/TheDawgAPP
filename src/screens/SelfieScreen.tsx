@@ -16,6 +16,7 @@ import * as MediaLibrary from 'expo-media-library';
 import ViewShot from 'react-native-view-shot';
 import { formatTimeDisplay } from '../utils/formatTime';
 import { COLORS } from '../constants/colors';
+import { COLORS as DS_COLORS, FONTS, BRAND } from '../constants/designSystem';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -134,20 +135,40 @@ export function SelfieScreen({
   };
 
   // ═══════════════════════════════════════════════
-  //  THE STATS OVERLAY (used in both camera & preview)
+  //  THE STATS OVERLAY (brand kit share card design)
   // ═══════════════════════════════════════════════
   const StatsOverlay = () => (
     <View style={styles.statsContainer}>
-      <Text style={styles.statsTitle}>I Raw Dawg'd for</Text>
-      <Text style={styles.statsTime}>{formatTimeDisplay(completedSeconds)}</Text>
-
-      <View style={styles.statsRow}>
-        <Text style={styles.statsText}>🐕 {stillnessPercent}% still</Text>
-        <Text style={styles.statsDivider}>•</Text>
-        <Text style={styles.statsText}>{blinksCount} blinks</Text>
+      {/* CAMERA VERIFIED Badge */}
+      <View style={styles.verifiedBadge}>
+        <View style={styles.verifiedDot} />
+        <Text style={styles.verifiedText}>CAMERA VERIFIED</Text>
       </View>
 
+      {/* Header Text */}
+      <Text style={styles.statsTitle}>I Raw Dawg'd for</Text>
+      
+      {/* Time Display */}
+      <Text style={styles.statsTime}>{formatTimeDisplay(completedSeconds)}</Text>
+
+      {/* Stat Chips */}
+      <View style={styles.statsChipsRow}>
+        <View style={styles.statChip}>
+          <Text style={styles.statChipText}>🐕 {stillnessPercent}% still</Text>
+        </View>
+        <View style={styles.statChip}>
+          <Text style={styles.statChipText}>{blinksCount} blinks</Text>
+        </View>
+      </View>
+
+      {/* Coral Gradient Divider */}
+      <View style={styles.coralDivider} />
+
+      {/* Handle */}
       <Text style={styles.handleText}>@TheRAWDAWGapp</Text>
+      
+      {/* Tagline */}
+      <Text style={styles.taglineText}>the art of doing absolutely nothing</Text>
     </View>
   );
 
@@ -269,7 +290,7 @@ export function SelfieScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.dark,
+    backgroundColor: DS_COLORS.bgDeep, // Brand kit background
   },
   camera: {
     flex: 1,
@@ -300,7 +321,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    backgroundColor: 'rgba(13, 13, 18, 0.95)', // Brand kit background with transparency
   },
   previewButtons: {
     paddingHorizontal: 20,
@@ -316,86 +337,162 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
   },
+  // Share Card - Brand Kit Design
   statsContainer: {
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    borderRadius: 20,
-    padding: 32,
+    backgroundColor: 'rgba(13, 13, 18, 0.78)', // Brand kit overlay color
+    borderRadius: 22, // Brand kit share card radius
+    paddingVertical: 24,
+    paddingHorizontal: 24, // Increased from 20 for better spacing
     alignItems: 'center',
-    gap: 12,
-    borderWidth: 2,
-    borderColor: COLORS.coral,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 77, 106, 0.45)', // Coral with opacity
+    // Simulating glass morphism shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 32,
+    elevation: 8,
+    width: '85%', // Increased from 80% to give time more space
+    maxWidth: 340, // Max width to keep it looking good on larger screens
   },
-  statsTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: COLORS.gray,
-    letterSpacing: 0.5,
-  },
-  statsTime: {
-    fontSize: 64,
-    fontWeight: '900',
-    color: COLORS.white,
-    letterSpacing: -2,
-  },
-  statsRow: {
+  
+  // Verified Badge
+  verifiedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
+    marginBottom: 10,
+  },
+  verifiedDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: DS_COLORS.verified,
+    // Pulse animation would go here (CSS keyframes in web)
+  },
+  verifiedText: {
+    fontSize: 8, // 0.5rem = 8px
+    fontFamily: FONTS.monoMedium,
+    color: DS_COLORS.verified,
+    letterSpacing: 3.2, // 0.2em of 8px = ~3.2px
+    textTransform: 'uppercase',
+  },
+  
+  // Header
+  statsTitle: {
+    fontSize: 13, // 0.8rem = ~13px
+    fontFamily: FONTS.body,
+    color: DS_COLORS.textSecondary,
+    marginBottom: 4,
+  },
+  
+  // Time Display (Hero) - Fixed to fit on one line
+  statsTime: {
+    fontSize: 64, // Reduced from 80 to fit on one line
+    fontFamily: FONTS.display, // Bebas Neue for hero time!
+    color: DS_COLORS.textPrimary,
+    letterSpacing: 2,
+    lineHeight: 64, // Match font size for single line
+    textShadowColor: 'rgba(255, 77, 106, 0.15)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 20,
+  },
+  
+  // Stat Chips
+  statsChipsRow: {
+    flexDirection: 'row',
     gap: 12,
     marginTop: 8,
+    marginBottom: 14,
   },
-  statsText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.white,
-    letterSpacing: 0.3,
+  statChip: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderRadius: 100, // Pill shape
+    paddingHorizontal: 12,
+    paddingVertical: 6,
   },
-  statsDivider: {
-    fontSize: 16,
-    color: COLORS.gray,
-    paddingHorizontal: 4,
+  statChipText: {
+    fontSize: 10, // 0.62rem = ~10px
+    fontFamily: FONTS.monoMedium,
+    color: DS_COLORS.textPrimary,
   },
+  
+  // Coral Gradient Divider
+  coralDivider: {
+    width: '100%',
+    height: 1,
+    backgroundColor: 'rgba(255, 77, 106, 0.25)',
+    marginBottom: 12,
+  },
+  
+  // Handle
   handleText: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: COLORS.coral,
-    letterSpacing: 0.5,
-    marginTop: 12,
+    fontSize: 16, // 1rem
+    fontFamily: FONTS.headingBold,
+    color: DS_COLORS.coral,
+    letterSpacing: 0.16, // +0.01em
+  },
+  
+  // Tagline
+  taglineText: {
+    fontSize: 8, // 0.5rem
+    fontFamily: FONTS.body,
+    color: 'rgba(255, 255, 255, 0.2)',
+    marginTop: 4,
   },
   bottomSection: {
     paddingHorizontal: 20,
     paddingBottom: 40,
     gap: 12,
   },
+  // Buttons - Brand Kit Styles
   button: {
-    paddingVertical: 18,
-    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 14, // Brand kit button radius
     alignItems: 'center',
   },
+  
+  // Primary CTA Button
   takePhotoButton: {
-    backgroundColor: COLORS.coral,
+    backgroundColor: DS_COLORS.coral,
+    shadowColor: DS_COLORS.coral,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 8,
   },
   takePhotoButtonText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.white,
-    letterSpacing: 1,
+    fontSize: 16, // 1rem
+    fontFamily: FONTS.heading,
+    color: DS_COLORS.textPrimary,
+    letterSpacing: 0,
   },
+  
+  // Secondary Button (Outline)
   retakeButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 77, 106, 0.4)',
   },
   retakeButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.white,
-    letterSpacing: 0.5,
+    fontFamily: FONTS.heading,
+    color: DS_COLORS.coral,
+    letterSpacing: 0,
   },
+  
+  // Text Button
   skipButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'transparent',
+    paddingVertical: 12,
   },
   skipButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.white,
-    letterSpacing: 0.5,
+    fontSize: 14, // 0.9rem
+    fontFamily: FONTS.bodyMedium,
+    color: DS_COLORS.textMuted,
+    letterSpacing: 0,
   },
 });

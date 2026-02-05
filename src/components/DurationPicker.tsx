@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { DURATION_OPTIONS, DurationOption } from '../constants/durations';
 import { COLORS } from '../constants/colors';
+import { COLORS as DS_COLORS, FONTS } from '../constants/designSystem';
 
 interface DurationPickerProps {
   selectedDuration: number;
@@ -50,8 +51,8 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 18,
-    fontWeight: '600',
-    color: COLORS.white,
+    fontFamily: FONTS.headingMedium,
+    color: DS_COLORS.textSecondary,
     marginBottom: 16,
     textAlign: 'center',
   },
@@ -65,35 +66,35 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 14,
     borderRadius: 12,
-    backgroundColor: COLORS.darkGray,
+    backgroundColor: DS_COLORS.bgSurfaceLight,
     borderWidth: 2,
-    borderColor: COLORS.darkGray,
+    borderColor: 'rgba(255, 255, 255, 0.04)',
     minWidth: 90,
   },
   optionButtonSelected: {
-    backgroundColor: COLORS.coral,
-    borderColor: COLORS.coral,
+    backgroundColor: 'rgba(255, 77, 106, 0.12)',
+    borderColor: DS_COLORS.coral,
   },
   rogueButton: {
-    backgroundColor: COLORS.darkSecondary,
-    borderColor: COLORS.warning,
+    backgroundColor: DS_COLORS.bgSurface,
+    borderColor: DS_COLORS.amber,
     borderWidth: 2,
   },
   rogueButtonSelected: {
-    backgroundColor: COLORS.warning,
-    borderColor: COLORS.warning,
+    backgroundColor: DS_COLORS.amber,
+    borderColor: DS_COLORS.amber,
   },
   optionText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.gray,
+    fontFamily: FONTS.headingMedium,
+    color: DS_COLORS.textSecondary,
     textAlign: 'center',
   },
   rogueText: {
-    color: COLORS.warning,
-    fontWeight: '700',
+    fontFamily: FONTS.monoMedium,
+    color: DS_COLORS.amber,
   },
   optionTextSelected: {
-    color: COLORS.white,
+    color: DS_COLORS.coral,
   },
 });

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { COLORS } from '../constants/colors';
+import { COLORS as DS_COLORS, FONTS } from '../constants/designSystem';
 
 export function RecordingIndicator() {
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -42,25 +43,26 @@ export function RecordingIndicator() {
 }
 
 const styles = StyleSheet.create({
+  // Brand Kit - REC Indicator
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: COLORS.overlay,
+    gap: 6, // Tighter gap per brand kit
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: 'transparent', // No background per brand kit
     borderRadius: 20,
   },
   dot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: COLORS.coral,
+    width: 6, // 6px per brand kit
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: DS_COLORS.coral, // Red per brand kit
   },
   text: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.white,
-    letterSpacing: 1,
+    fontSize: 10, // 0.6rem = ~10px per brand kit
+    fontFamily: FONTS.monoMedium,
+    color: DS_COLORS.coral,
+    letterSpacing: 0,
   },
 });

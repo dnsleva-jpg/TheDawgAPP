@@ -1,14 +1,27 @@
+// Legacy colors file - updated to match The Raw Dawg App brand kit
+// Importing from design system for consistency
+import { COLORS as DS_COLORS } from './designSystem';
+
 export const COLORS = {
-  dark: '#1a1a2e',
-  darkSecondary: '#16213e',
-  coral: '#e94560',
-  coralDark: '#c73a4f',
-  white: '#ffffff',
-  lightGray: '#f1f1f1',
-  gray: '#a0a0a0',
-  darkGray: '#3a3a4e',
-  success: '#00d4aa',
-  warning: '#ffa500',
+  // Backgrounds (updated to brand kit)
+  dark: DS_COLORS.bgDeep,
+  darkSecondary: DS_COLORS.bgSurface,
+  darkGray: DS_COLORS.bgSurfaceLight,
+  
+  // Primary accent (updated to brand kit)
+  coral: DS_COLORS.coral,
+  coralDark: DS_COLORS.coralDim,
+  
+  // Text (updated to brand kit)
+  white: DS_COLORS.textPrimary,
+  gray: DS_COLORS.textSecondary,
+  lightGray: DS_COLORS.textMuted,
+  
+  // Status colors (updated to brand kit)
+  success: DS_COLORS.verified,
+  warning: DS_COLORS.amber,
+  
+  // Utility
   transparent: 'transparent',
-  overlay: 'rgba(26, 26, 46, 0.8)',
+  overlay: 'rgba(13, 13, 18, 0.78)', // Updated to match share card overlay
 };

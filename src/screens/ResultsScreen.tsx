@@ -16,6 +16,7 @@ import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { formatTimeDisplay, formatRecordTime } from '../utils/formatTime';
 import { COLORS } from '../constants/colors';
+import { COLORS as DS_COLORS, FONTS, BRAND, RADIUS, SHADOWS } from '../constants/designSystem';
 import { UserStats } from '../types';
 import { getSessions } from '../utils/storage';
 import { calculateStats, formatTotalTime } from '../utils/stats';
@@ -123,19 +124,35 @@ export function ResultsScreen({ completedSeconds, videoUri, onGoHome }: ResultsS
     return `I just Raw Dawg'd ${selectedLocation} 🐕 Speed up 20x for the full effect! @TheRAWDAWGapp #rawdawg #dopaminedetox`;
   };
 
+  const [captionCopied, setCaptionCopied] = useState(false);
+
+  const handleCopyCaption = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    
+    const caption = getCaption();
+    
+    try {
+      await Clipboard.setStringAsync(caption);
+      console.log('📋 ✅ Caption copied:', caption);
+      
+      setCaptionCopied(true);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      
+      // Reset after 3 seconds
+      setTimeout(() => setCaptionCopied(false), 3000);
+    } catch (error) {
+      console.error('📋 ❌ Copy failed:', error);
+      Alert.alert('Copy Failed', 'Could not copy caption to clipboard');
+    }
+  };
+
   const handleShareToPlatform = async (platform: 'tiktok' | 'instagram') => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     
     console.log(`📤 ========== SHARE TO ${platform.toUpperCase()} ==========`);
     
-    const caption = getCaption();
-    
     try {
       setIsProcessingVideo(true);
-      
-      // Copy caption to clipboard
-      await Clipboard.setStringAsync(caption);
-      console.log('📤 ✅ Caption copied:', caption);
       
       // Save video to camera roll if we have one
       if (videoUri) {
@@ -145,32 +162,45 @@ export function ResultsScreen({ completedSeconds, videoUri, onGoHome }: ResultsS
       }
       
       setIsProcessingVideo(false);
-      setShowCaptionPreview(false);
       
-      // Show success message with platform-specific button
+      // Give user clear instructions
       Alert.alert(
-        '✅ Ready to Share!',
+        '✅ Video Saved!',
         videoUri 
-          ? 'Video saved to camera roll!\n\nCaption copied to clipboard.\n\n💡 TIP: Use the speed tool in TikTok/Instagram to speed it up 20x!'
-          : 'Caption copied to clipboard!',
+          ? `Video saved to camera roll!\n\n💡 TIP:\n1. Copy the caption again before opening ${platform === 'tiktok' ? 'TikTok' : 'Instagram'}\n2. Use their speed tool to speed it up 20x`
+          : `Caption is ready! Copy it before opening ${platform === 'tiktok' ? 'TikTok' : 'Instagram'}.`,
         [
+          {
+            text: 'Cancel',
+            style: 'cancel'
+          },
           {
             text: `Open ${platform === 'tiktok' ? 'TikTok' : 'Instagram'}`,
             onPress: async () => {
-              const url = platform === 'tiktok' 
-                ? 'https://www.tiktok.com/upload'
-                : 'instagram://camera';
+              // Copy caption RIGHT before opening
+              const caption = getCaption();
+              await Clipboard.setStringAsync(caption);
+              console.log('📋 ✅ Caption re-copied before opening app');
               
-              console.log(`📤 Opening ${platform}...`);
-              
-              try {
-                await Linking.openURL(url);
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              } catch (error) {
-                if (platform === 'instagram') {
-                  await Linking.openURL('https://www.instagram.com/');
+              // Small delay to ensure clipboard sync
+              setTimeout(async () => {
+                const url = platform === 'tiktok' 
+                  ? 'https://www.tiktok.com/upload'
+                  : 'instagram://camera';
+                
+                console.log(`📤 Opening ${platform}...`);
+                
+                try {
+                  await Linking.openURL(url);
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                  setShowCaptionPreview(false);
+                } catch (error) {
+                  if (platform === 'instagram') {
+                    await Linking.openURL('https://www.instagram.com/');
+                    setShowCaptionPreview(false);
+                  }
                 }
-              }
+              }, 500); // 500ms delay for clipboard to sync
             }
           }
         ]
@@ -182,8 +212,8 @@ export function ResultsScreen({ completedSeconds, videoUri, onGoHome }: ResultsS
       setIsProcessingVideo(false);
       console.log('📤 ❌ Error:', error);
       Alert.alert(
-        'Caption Copied!', 
-        `Caption copied to clipboard! Open ${platform === 'tiktok' ? 'TikTok' : 'Instagram'} manually and upload from camera roll. 📋`
+        'Error', 
+        `Could not save video. Error: ${error.message}`
       );
     }
   };
@@ -197,39 +227,17 @@ export function ResultsScreen({ completedSeconds, videoUri, onGoHome }: ResultsS
     }
     
     try {
-      setIsProcessingVideo(true);
       console.log('📹 Saving video...');
       
-      // Save video to camera roll
+      // Save video to camera roll first
       await saveVideoToPhotos(videoUri);
       
-      // Copy caption (but only if location is selected for SHARE flow)
-      // For SAVE VIDEO button, skip caption
+      console.log('📹 ✅ Video saved! Opening location picker...');
       
-      setIsProcessingVideo(false);
-      
-      Alert.alert(
-        '✅ Saved!',
-        'Video saved to camera roll!\n\n💡 TIP: Use the speed tool in TikTok/Instagram to speed it up 20x!',
-        [
-          { text: 'Done', style: 'cancel' },
-          {
-            text: 'Open TikTok',
-            onPress: () => Linking.openURL('https://www.tiktok.com/upload')
-          },
-          {
-            text: 'Open Instagram',
-            onPress: () => Linking.openURL('instagram://camera').catch(() => 
-              Linking.openURL('https://www.instagram.com/')
-            )
-          }
-        ]
-      );
-      
-      console.log('📹 ✅ Video + Stats card saved!');
+      // Now show location picker, same as Share button
+      setShowLocationPicker(true);
       
     } catch (error: any) {
-      setIsProcessingVideo(false);
       console.error('📹 ❌ Save failed:', error);
       Alert.alert('Error', `Failed to save: ${error.message}`);
     }
@@ -445,13 +453,31 @@ export function ResultsScreen({ completedSeconds, videoUri, onGoHome }: ResultsS
                   <Text style={styles.captionPreviewText}>{getCaption()}</Text>
                 </View>
                 
+                {/* Copy Caption Button with Visual Feedback */}
+                <TouchableOpacity
+                  style={[
+                    styles.copyButton,
+                    captionCopied && styles.copyButtonSuccess
+                  ]}
+                  onPress={handleCopyCaption}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.copyButtonText}>
+                    {captionCopied ? '✅ Copied!' : '📋 Copy Caption'}
+                  </Text>
+                </TouchableOpacity>
+                
+                <Text style={styles.instructionText}>
+                  👆 Copy caption first, then open your app
+                </Text>
+                
                 <View style={styles.platformButtons}>
                   <TouchableOpacity
                     style={[styles.platformButton, styles.tiktokButton]}
                     onPress={() => handleShareToPlatform('tiktok')}
                     activeOpacity={0.8}
                   >
-                    <Text style={styles.platformButtonText}>📱 Copy & Open TikTok</Text>
+                    <Text style={styles.platformButtonText}>📱 Open TikTok</Text>
                   </TouchableOpacity>
                   
                   <TouchableOpacity
@@ -459,13 +485,16 @@ export function ResultsScreen({ completedSeconds, videoUri, onGoHome }: ResultsS
                     onPress={() => handleShareToPlatform('instagram')}
                     activeOpacity={0.8}
                   >
-                    <Text style={styles.platformButtonText}>📸 Copy & Open Instagram</Text>
+                    <Text style={styles.platformButtonText}>📸 Open Instagram</Text>
                   </TouchableOpacity>
                 </View>
                 
                 <TouchableOpacity
                   style={styles.modalCloseButton}
-                  onPress={() => setShowCaptionPreview(false)}
+                  onPress={() => {
+                    setShowCaptionPreview(false);
+                    setCaptionCopied(false);
+                  }}
                   activeOpacity={0.8}
                 >
                   <Text style={styles.modalCloseButtonText}>Cancel</Text>
@@ -480,9 +509,10 @@ export function ResultsScreen({ completedSeconds, videoUri, onGoHome }: ResultsS
 }
 
 const styles = StyleSheet.create({
+  // Brand Kit - Results Screen
   container: {
     flex: 1,
-    backgroundColor: COLORS.dark,
+    backgroundColor: DS_COLORS.bgDeep, // Brand kit background
   },
   content: {
     flex: 1,
@@ -496,19 +526,20 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   emoji: {
-    fontSize: 80,
+    fontSize: 48, // Reduced from 80 per brand kit
   },
   title: {
-    fontSize: 28,
-    fontWeight: '900',
-    color: COLORS.coral,
-    letterSpacing: 2,
+    fontSize: 24, // 1.5rem - reduced from 28
+    fontFamily: FONTS.headingBold,
+    color: DS_COLORS.verified, // Green for SESSION COMPLETE per brand kit
+    letterSpacing: 0,
     textAlign: 'center',
+    textTransform: 'uppercase',
   },
   subtitle: {
-    fontSize: 16,
-    fontWeight: '400',
-    color: COLORS.gray,
+    fontSize: 14, // 0.9rem - reduced from 16
+    fontFamily: FONTS.body,
+    color: DS_COLORS.textSecondary,
     textAlign: 'center',
   },
   timeContainer: {
@@ -516,15 +547,15 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   timeDisplay: {
-    fontSize: 72,
-    fontWeight: '900',
-    color: COLORS.white,
+    fontSize: 80, // 5rem - kept large but matching brand kit
+    fontFamily: FONTS.display, // Bebas Neue for time!
+    color: DS_COLORS.textPrimary, // Warm white per brand kit
     letterSpacing: 2,
   },
   timeLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.gray,
+    fontSize: 13, // 0.8rem - smaller
+    fontFamily: FONTS.monoMedium,
+    color: DS_COLORS.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 2,
   },
@@ -534,8 +565,8 @@ const styles = StyleSheet.create({
   },
   statText: {
     fontSize: 18,
-    fontWeight: '600',
-    color: COLORS.lightGray,
+    fontFamily: FONTS.monoBold,
+    color: DS_COLORS.textSecondary,
     textAlign: 'center',
   },
   statsSection: {
@@ -543,8 +574,8 @@ const styles = StyleSheet.create({
   },
   statsTitle: {
     fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.gray,
+    fontFamily: FONTS.heading,
+    color: DS_COLORS.textSecondary,
     textAlign: 'center',
     textTransform: 'uppercase',
     letterSpacing: 2,
@@ -557,12 +588,12 @@ const styles = StyleSheet.create({
   miniStatCard: {
     flex: 1,
     minWidth: '22%',
-    backgroundColor: COLORS.darkSecondary,
+    backgroundColor: DS_COLORS.bgSurface, // Brand kit surface color
     padding: 12,
-    borderRadius: 12,
+    borderRadius: RADIUS.card, // Brand kit card radius
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: COLORS.darkGray,
+    borderColor: 'rgba(255, 255, 255, 0.04)', // Brand kit card border
     gap: 4,
   },
   miniStatEmoji: {
@@ -570,13 +601,13 @@ const styles = StyleSheet.create({
   },
   miniStatValue: {
     fontSize: 18,
-    fontWeight: '900',
-    color: COLORS.coral,
+    fontFamily: FONTS.monoBold,
+    color: DS_COLORS.coral,
   },
   miniStatLabel: {
     fontSize: 10,
-    fontWeight: '600',
-    color: COLORS.gray,
+    fontFamily: FONTS.bodyMedium,
+    color: DS_COLORS.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -599,47 +630,44 @@ const styles = StyleSheet.create({
   },
   timelapseButtonText: {
     fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.white,
+    fontFamily: FONTS.heading,
+    color: DS_COLORS.textPrimary,
     letterSpacing: 2,
   },
+  // Brand Kit - Primary CTA Button
   shareButton: {
-    backgroundColor: COLORS.coral,
-    paddingVertical: 18,
-    borderRadius: 12,
+    backgroundColor: DS_COLORS.coral,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: RADIUS.button, // 14px per brand kit
     alignItems: 'center',
-    shadowColor: COLORS.coral,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
+    ...SHADOWS.coralButton, // Brand kit coral button shadow
   },
   shareButtonDisabled: {
-    backgroundColor: COLORS.darkGray,
+    backgroundColor: DS_COLORS.textDisabled,
     shadowOpacity: 0,
   },
   shareButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.white,
-    letterSpacing: 2,
+    fontSize: 16, // 1rem
+    fontFamily: FONTS.heading,
+    color: DS_COLORS.textPrimary,
+    letterSpacing: 0,
   },
+  // Brand Kit - Secondary Button (Outline)
   goAgainButton: {
     backgroundColor: 'transparent',
-    paddingVertical: 18,
-    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: RADIUS.button,
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: COLORS.coral,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 77, 106, 0.4)', // Brand kit secondary border
   },
   goAgainButtonText: {
     fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.coral,
-    letterSpacing: 2,
+    fontFamily: FONTS.heading,
+    color: DS_COLORS.coral,
+    letterSpacing: 0,
   },
   doneButton: {
     paddingVertical: 16,
@@ -647,8 +675,8 @@ const styles = StyleSheet.create({
   },
   doneButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.gray,
+    fontFamily: FONTS.bodyMedium,
+    color: DS_COLORS.textSecondary,
     letterSpacing: 1,
   },
   // Modal styles
@@ -658,7 +686,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: COLORS.darkSecondary,
+    backgroundColor: DS_COLORS.bgSurface, // Brand kit surface color
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingTop: 24,
@@ -668,23 +696,24 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 24,
-    fontWeight: '900',
-    color: COLORS.white,
+    fontFamily: FONTS.headingBold,
+    color: DS_COLORS.textPrimary,
     textAlign: 'center',
     marginBottom: 24,
   },
   locationsList: {
     maxHeight: 400,
   },
+  // Brand Kit - Location Picker Cards
   locationOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.dark,
+    backgroundColor: DS_COLORS.bgSurface, // Brand kit surface
     padding: 18,
-    borderRadius: 12,
+    borderRadius: RADIUS.card,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: COLORS.darkGray,
+    borderColor: 'rgba(255, 255, 255, 0.04)', // Brand kit card border
   },
   locationEmoji: {
     fontSize: 28,
@@ -692,33 +721,33 @@ const styles = StyleSheet.create({
   },
   locationText: {
     fontSize: 18,
-    fontWeight: '600',
-    color: COLORS.white,
+    fontFamily: FONTS.headingMedium,
+    color: DS_COLORS.textPrimary,
     textTransform: 'capitalize',
   },
   customInputContainer: {
     gap: 12,
   },
   customInput: {
-    backgroundColor: COLORS.dark,
-    color: COLORS.white,
+    backgroundColor: DS_COLORS.bgDeep,
+    color: DS_COLORS.textPrimary,
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: FONTS.headingMedium,
     padding: 18,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: COLORS.coral,
+    borderColor: DS_COLORS.coral,
   },
   customSubmitButton: {
-    backgroundColor: COLORS.coral,
+    backgroundColor: DS_COLORS.coral,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
   },
   customSubmitButtonText: {
     fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.white,
+    fontFamily: FONTS.heading,
+    color: DS_COLORS.textPrimary,
     letterSpacing: 1,
   },
   customCancelButton: {
@@ -727,8 +756,8 @@ const styles = StyleSheet.create({
   },
   customCancelButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.gray,
+    fontFamily: FONTS.bodyMedium,
+    color: DS_COLORS.textSecondary,
   },
   modalCloseButton: {
     paddingVertical: 16,
@@ -737,64 +766,94 @@ const styles = StyleSheet.create({
   },
   modalCloseButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.gray,
+    fontFamily: FONTS.bodyMedium,
+    color: DS_COLORS.textSecondary,
   },
   processingContainer: {
-    backgroundColor: COLORS.dark,
+    backgroundColor: DS_COLORS.bgDeep,
     padding: 32,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: COLORS.coral,
+    borderColor: DS_COLORS.coral,
     marginBottom: 24,
     alignItems: 'center',
     gap: 12,
   },
   processingText: {
     fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.white,
+    fontFamily: FONTS.heading,
+    color: DS_COLORS.textPrimary,
     textAlign: 'center',
   },
   processingSubtext: {
     fontSize: 14,
-    fontWeight: '500',
-    color: COLORS.gray,
+    fontFamily: FONTS.body,
+    color: DS_COLORS.textSecondary,
     textAlign: 'center',
   },
+  // Brand Kit - Caption Card
   captionPreviewContainer: {
-    backgroundColor: COLORS.dark,
+    backgroundColor: DS_COLORS.bgSurface,
     padding: 20,
-    borderRadius: 12,
+    borderRadius: RADIUS.card,
     borderWidth: 1,
-    borderColor: COLORS.darkGray,
+    borderColor: 'rgba(255, 255, 255, 0.04)', // Brand kit card border
     marginBottom: 24,
   },
   captionPreviewText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.white,
+    fontFamily: FONTS.body,
+    color: DS_COLORS.textPrimary,
     lineHeight: 24,
     textAlign: 'center',
+  },
+  // Brand Kit - Copy Caption Button
+  copyButton: {
+    backgroundColor: DS_COLORS.coral,
+    paddingVertical: 18,
+    borderRadius: RADIUS.button,
+    alignItems: 'center',
+    marginBottom: 8,
+    ...SHADOWS.coralButton,
+  },
+  copyButtonSuccess: {
+    backgroundColor: DS_COLORS.verified, // Brand kit verified green
+  },
+  copyButtonText: {
+    fontSize: 18,
+    fontFamily: FONTS.heading,
+    color: DS_COLORS.textPrimary,
+    letterSpacing: 1,
+  },
+  instructionText: {
+    fontSize: 14,
+    fontFamily: FONTS.bodyMedium,
+    color: DS_COLORS.textMuted, // Brand kit muted text
+    textAlign: 'center',
+    marginBottom: 16,
   },
   platformButtons: {
     gap: 12,
   },
+  // Brand Kit - Platform Buttons
   platformButton: {
-    paddingVertical: 18,
-    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: RADIUS.button,
     alignItems: 'center',
   },
   tiktokButton: {
-    backgroundColor: COLORS.coral,
+    backgroundColor: DS_COLORS.coral, // Use brand coral for consistency
+    ...SHADOWS.coralButton,
   },
   instagramButton: {
-    backgroundColor: '#E1306C', // Instagram pink
+    backgroundColor: DS_COLORS.coral, // Use brand coral for consistency
+    ...SHADOWS.coralButton,
   },
   platformButtonText: {
     fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.white,
-    letterSpacing: 1,
+    fontFamily: FONTS.heading,
+    color: DS_COLORS.textPrimary,
+    letterSpacing: 0,
   },
 });

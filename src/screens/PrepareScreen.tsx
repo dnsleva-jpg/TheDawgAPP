@@ -10,6 +10,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Camera, CameraView } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
 import { COLORS } from '../constants/colors';
+import { COLORS as DS_COLORS, FONTS, RADIUS, SHADOWS } from '../constants/designSystem';
 
 interface PrepareScreenProps {
   durationMinutes: number;
@@ -136,9 +137,10 @@ function InstructionItem({ text }: InstructionItemProps) {
 }
 
 const styles = StyleSheet.create({
+  // Brand Kit - Prepare Screen
   container: {
     flex: 1,
-    backgroundColor: COLORS.dark,
+    backgroundColor: DS_COLORS.bgDeep,
   },
   content: {
     flex: 1,
@@ -151,16 +153,16 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   title: {
-    fontSize: 32,
-    fontWeight: '900',
-    color: COLORS.coral,
-    letterSpacing: 1,
+    fontSize: 20, // 1.25rem = 20px per brand kit "Before You Start"
+    fontFamily: FONTS.heading,
+    color: DS_COLORS.textPrimary,
+    letterSpacing: 0,
     textAlign: 'center',
   },
   duration: {
     fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.gray,
+    fontFamily: FONTS.monoMedium,
+    color: DS_COLORS.textSecondary,
     textAlign: 'center',
   },
   instructionsContainer: {
@@ -178,47 +180,43 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: COLORS.coral,
+    backgroundColor: DS_COLORS.coral,
     marginTop: 8,
   },
   instructionText: {
     flex: 1,
-    fontSize: 18,
-    fontWeight: '500',
-    color: COLORS.white,
-    lineHeight: 26,
+    fontSize: 14, // 0.9rem = ~14px per brand kit body text
+    fontFamily: FONTS.body,
+    color: DS_COLORS.textSecondary,
+    lineHeight: 24, // 1.5-1.7 line height per brand kit
   },
   buttonsContainer: {
     gap: 12,
   },
+  // Brand Kit - Ready Button (Primary CTA)
   readyButton: {
-    backgroundColor: COLORS.coral,
-    paddingVertical: 20,
-    borderRadius: 16,
+    backgroundColor: DS_COLORS.coral,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: RADIUS.button,
     alignItems: 'center',
-    shadowColor: COLORS.coral,
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 8,
+    ...SHADOWS.coralButton,
   },
   readyButtonText: {
     fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.white,
-    letterSpacing: 2,
+    fontFamily: FONTS.heading,
+    color: DS_COLORS.textPrimary,
+    letterSpacing: 0,
   },
+  // Brand Kit - Back Button (Text Button)
   backButton: {
-    paddingVertical: 16,
+    paddingVertical: 12,
     alignItems: 'center',
   },
   backButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.gray,
+    fontSize: 14,
+    fontFamily: FONTS.bodyMedium,
+    color: DS_COLORS.textMuted,
   },
   camera: {
     flex: 1,
@@ -227,6 +225,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.overlay,
   },
+  // Brand Kit - Countdown Screen
   countdownContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -234,15 +233,18 @@ const styles = StyleSheet.create({
     gap: 24,
   },
   countdownText: {
-    fontSize: 120,
-    fontWeight: '900',
-    color: COLORS.coral,
-    letterSpacing: 4,
+    fontSize: 128, // 8rem = 128px per brand kit
+    fontFamily: FONTS.display, // Bebas Neue for countdown
+    color: DS_COLORS.textPrimary, // Warm white per brand kit
+    letterSpacing: 2,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 20,
   },
   countdownLabel: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: COLORS.white,
+    fontSize: 16, // 1rem per brand kit
+    fontFamily: FONTS.body,
+    color: DS_COLORS.textSecondary,
     textAlign: 'center',
   },
 });

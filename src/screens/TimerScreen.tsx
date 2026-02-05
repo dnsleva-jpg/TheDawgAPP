@@ -15,6 +15,7 @@ import { useTimer } from '../hooks/useTimer';
 import { RecordingIndicator } from '../components/RecordingIndicator';
 import { formatTimeDisplay } from '../utils/formatTime';
 import { COLORS } from '../constants/colors';
+import { COLORS as DS_COLORS, FONTS, BRAND } from '../constants/designSystem';
 
 interface TimerScreenProps {
   durationSeconds: number;
@@ -129,7 +130,9 @@ export function TimerScreen({
     }
 
     // Calculate the actual completed time
-    let completedTime = isRogueMode ? timeRemaining : durationSeconds;
+    // Rogue mode: timeRemaining counts UP from 0
+    // Normal mode: timeRemaining counts DOWN, so elapsed = durationSeconds - timeRemaining
+    let completedTime = isRogueMode ? timeRemaining : (durationSeconds - timeRemaining);
     
     if (completedTime < 0 || isNaN(completedTime)) {
       console.warn('⚠️ Invalid completedTime detected, using 0');
@@ -327,20 +330,22 @@ export function TimerScreen({
 }
 
 const styles = StyleSheet.create({
+  // Brand Kit - Timer Screen
   container: {
     flex: 1,
-    backgroundColor: COLORS.dark,
+    backgroundColor: DS_COLORS.bgDeep, // Brand kit background
   },
   loadingContainer: {
     flex: 1,
-    backgroundColor: COLORS.dark,
+    backgroundColor: DS_COLORS.bgDeep,
     justifyContent: 'center',
     alignItems: 'center',
     gap: 20,
   },
   loadingText: {
     fontSize: 16,
-    color: COLORS.white,
+    fontFamily: FONTS.body,
+    color: DS_COLORS.textPrimary,
   },
   camera: {
     flex: 1,
@@ -369,8 +374,8 @@ const styles = StyleSheet.create({
   },
   cancelButtonText: {
     fontSize: 24,
-    fontWeight: '600',
-    color: COLORS.white,
+    fontFamily: FONTS.heading,
+    color: DS_COLORS.textPrimary,
   },
   centerSection: {
     flex: 1,
@@ -382,8 +387,8 @@ const styles = StyleSheet.create({
   },
   rogueModeLabel: {
     fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.warning,
+    fontFamily: FONTS.monoMedium,
+    color: DS_COLORS.amber,
     letterSpacing: 2,
     textTransform: 'uppercase',
   },
@@ -397,8 +402,8 @@ const styles = StyleSheet.create({
   },
   timerText: {
     fontSize: 80,
-    fontWeight: '900',
-    color: COLORS.white,
+    fontFamily: FONTS.display, // Bebas Neue for countdown
+    color: DS_COLORS.textPrimary,
     letterSpacing: 4,
     textShadowColor: 'rgba(0, 0, 0, 0.8)',
     textShadowOffset: { width: 0, height: 2 },
@@ -414,8 +419,8 @@ const styles = StyleSheet.create({
   },
   captionText: {
     fontSize: 22,
-    fontWeight: '700',
-    color: COLORS.white,
+    fontFamily: FONTS.headingBold,
+    color: DS_COLORS.textPrimary,
     textAlign: 'center',
     letterSpacing: 0.5,
     textShadowColor: 'rgba(0, 0, 0, 0.8)',
@@ -431,8 +436,8 @@ const styles = StyleSheet.create({
   },
   handleText: {
     fontSize: 20,
-    fontWeight: '800',
-    color: COLORS.coral,
+    fontFamily: FONTS.headingBold,
+    color: DS_COLORS.coral,
     textAlign: 'center',
     letterSpacing: 1,
     textShadowColor: 'rgba(0, 0, 0, 0.8)',
@@ -462,8 +467,8 @@ const styles = StyleSheet.create({
   },
   sessionText: {
     fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.white,
+    fontFamily: FONTS.monoMedium,
+    color: DS_COLORS.textPrimary,
     textAlign: 'center',
     letterSpacing: 0.5,
   },
@@ -474,13 +479,14 @@ const styles = StyleSheet.create({
   },
   statsText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.white,
+    fontFamily: FONTS.monoMedium,
+    color: DS_COLORS.textPrimary,
     letterSpacing: 0.3,
   },
   statsDivider: {
     fontSize: 14,
-    color: COLORS.gray,
+    fontFamily: FONTS.mono,
+    color: DS_COLORS.textSecondary,
     paddingHorizontal: 4,
   },
   bottomSection: {
@@ -492,38 +498,39 @@ const styles = StyleSheet.create({
     paddingHorizontal: 48,
     paddingVertical: 16,
     borderRadius: 12,
-    backgroundColor: COLORS.darkGray,
+    backgroundColor: DS_COLORS.bgSurfaceLight,
     borderWidth: 2,
-    borderColor: COLORS.gray,
+    borderColor: DS_COLORS.textSecondary,
   },
   pauseButtonText: {
     fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.white,
+    fontFamily: FONTS.heading,
+    color: DS_COLORS.textPrimary,
     letterSpacing: 2,
   },
+  // Brand Kit - Finish Button
   finishButton: {
     paddingHorizontal: 48,
     paddingVertical: 16,
-    borderRadius: 12,
-    backgroundColor: COLORS.warning,
-    borderWidth: 2,
-    borderColor: COLORS.warning,
+    borderRadius: 14,
+    backgroundColor: DS_COLORS.amber, // Brand kit amber for finish
+    borderWidth: 0,
   },
   finishButtonText: {
     fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.dark,
-    letterSpacing: 2,
+    fontFamily: FONTS.heading,
+    color: DS_COLORS.bgDeep, // Dark text on amber background
+    letterSpacing: 1,
   },
+  // Brand Kit - Give Up Button (subtle, afterthought)
   giveUpButton: {
     paddingHorizontal: 32,
     paddingVertical: 12,
   },
   giveUpButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.coral,
-    letterSpacing: 1,
+    fontSize: 13, // 0.8rem - small per brand kit
+    fontFamily: FONTS.body,
+    color: DS_COLORS.textDisabled, // Very subtle per brand kit
+    letterSpacing: 0,
   },
 });
