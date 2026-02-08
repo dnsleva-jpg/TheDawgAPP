@@ -107,40 +107,38 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
           />
         </View>
 
-        {/* Stats Grid */}
-        {stats.totalSessions > 0 && (
-          <View style={styles.statsContainer}>
-            <View style={styles.statsGrid}>
-              <View style={styles.statCard}>
-                <Text style={styles.statEmoji}>✓</Text>
-                <Text style={styles.statValue}>{stats.totalSessions}</Text>
-                <Text style={styles.statLabel}>Done</Text>
-              </View>
-              
-              <View style={styles.statCard}>
-                <Text style={styles.statEmoji}>⏱️</Text>
-                <Text style={styles.statValue}>
-                  {formatTotalTime(stats.totalTimeSeconds)}
-                </Text>
-                <Text style={styles.statLabel}>Total</Text>
-              </View>
-              
-              <View style={styles.statCard}>
-                <Text style={styles.statEmoji}>🔥</Text>
-                <Text style={styles.statValue}>{stats.currentStreak}</Text>
-                <Text style={styles.statLabel}>Streak</Text>
-              </View>
-              
+        {/* Stats Grid - Always visible */}
+        <View style={styles.statsContainer}>
+          <View style={styles.statsGrid}>
             <View style={styles.statCard}>
-              <Text style={styles.statEmoji}>🏆</Text>
+              <Text style={styles.statEmoji}>✓</Text>
+              <Text style={styles.statValue}>{stats.totalSessions}</Text>
+              <Text style={styles.statLabel}>Done</Text>
+            </View>
+            
+            <View style={styles.statCard}>
+              <Text style={styles.statEmoji}>⏱️</Text>
               <Text style={styles.statValue}>
-                {formatRecordTime(stats.longestSessionSeconds)}
+                {formatTotalTime(stats.totalTimeSeconds)}
               </Text>
-              <Text style={styles.statLabel}>Record</Text>
+              <Text style={styles.statLabel}>Total</Text>
             </View>
+            
+            <View style={styles.statCard}>
+              <Text style={styles.statEmoji}>🔥</Text>
+              <Text style={styles.statValue}>{streakData.currentStreak}</Text>
+              <Text style={styles.statLabel}>Streak</Text>
             </View>
+            
+          <View style={styles.statCard}>
+            <Text style={styles.statEmoji}>🏆</Text>
+            <Text style={styles.statValue}>
+              {formatRecordTime(stats.longestSessionSeconds)}
+            </Text>
+            <Text style={styles.statLabel}>Record</Text>
           </View>
-        )}
+          </View>
+        </View>
 
         <View style={styles.footer}>
           <TouchableOpacity

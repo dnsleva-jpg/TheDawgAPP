@@ -6,6 +6,7 @@ import {
   StyleSheet,
   SafeAreaView,
   Alert,
+  Pressable,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Camera, CameraView } from 'expo-camera';
@@ -26,15 +27,19 @@ interface TimerScreenProps {
     blinksCount?: number
   ) => void;
   onCancel: () => void;
+  incognitoMode?: boolean;
 }
 
 export function TimerScreen({
   durationSeconds,
   onComplete,
   onCancel,
+  incognitoMode = false,
 }: TimerScreenProps) {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [isRecording, setIsRecording] = useState(false);
+  const [showControls, setShowControls] = useState(false);
+  const [isStoppingRecording, setIsStoppingRecording] = useState(false);
   const cameraRef = useRef<CameraView>(null);
   const recordingPromiseRef = useRef<Promise<any> | null>(null);
   const { timeRemaining, status, progress, isRogueMode, start, pause, resume, finish } = useTimer(durationSeconds);
@@ -90,6 +95,7 @@ export function TimerScreen({
 
   const startRecording = async () => {
     console.log('📹 startRecording() called');
+    console.log('📹 Incognito mode:', incognitoMode);
     
     if (!cameraRef.current) {
       console.log('📹 ERROR: No camera ref available');
@@ -115,6 +121,15 @@ export function TimerScreen({
   const stopRecording = async (completed: boolean = false) => {
     console.log('📹 stopRecording() called, completed:', completed);
     console.log('📹 isRecording:', isRecording);
+    console.log('📹 Incognito mode:', incognitoMode);
+    console.log('📹 cameraRef.current:', !!cameraRef.current);
+    console.log('📹 recordingPromiseRef.current:', !!recordingPromiseRef.current);
+    
+    // Prevent double-calling
+    if (isStoppingRecording) {
+      console.log('📹 Already stopping recording, ignoring duplicate call');
+      return;
+    }
     
     if (!completed) {
       if (cameraRef.current && isRecording && recordingPromiseRef.current) {
@@ -128,6 +143,9 @@ export function TimerScreen({
       }
       return;
     }
+    
+    // Mark that we're stopping to prevent duplicate calls
+    setIsStoppingRecording(true);
 
     // Calculate the actual completed time
     // Rogue mode: timeRemaining counts UP from 0
@@ -145,8 +163,9 @@ export function TimerScreen({
     console.log('  timeRemaining:', timeRemaining);
     console.log('  completedTime (final):', completedTime);
     
-    if (!cameraRef.current || !isRecording || !recordingPromiseRef.current) {
+    if (!cameraRef.current || !recordingPromiseRef.current) {
       console.log('📹 No recording to stop');
+      setIsStoppingRecording(false);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       onComplete(completedTime, undefined, stillnessPercent, blinksCount);
       return;
@@ -154,11 +173,14 @@ export function TimerScreen({
 
     try {
       console.log('📹 Stopping recording...');
-      setIsRecording(false);
       cameraRef.current.stopRecording();
       
       const video = await recordingPromiseRef.current;
       console.log('📹 ✅ Recording stopped! Video URI:', video?.uri);
+      
+      setIsRecording(false);
+      setIsStoppingRecording(false);
+      recordingPromiseRef.current = null;
       
       if (video?.uri) {
         console.log('📹 Video recorded, passing stats to selfie screen');
@@ -171,6 +193,8 @@ export function TimerScreen({
       }
     } catch (error) {
       console.log('📹 ❌ Error during recording stop:', error);
+      setIsRecording(false);
+      setIsStoppingRecording(false);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       onComplete(completedTime, undefined, stillnessPercent, blinksCount);
     }
@@ -189,6 +213,17 @@ export function TimerScreen({
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
             // Complete with current time (even if session not finished)
             await stopRecording(true);
+          },
+        },
+        {
+          text: "End & Don't Save",
+          style: 'destructive',
+          onPress: async () => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+            // Stop recording without saving
+            await stopRecording(false);
+            // Go back to home screen
+            onCancel();
           },
         },
       ]
@@ -243,6 +278,62 @@ export function TimerScreen({
         facing="front"
         mode="video"
       >
+        {incognitoMode ? (
+          // Incognito Mode - Black screen with minimal UI
+          <Pressable 
+            style={styles.incognitoContainer}
+            onPress={() => setShowControls(!showControls)}
+          >
+            <View style={styles.blackScreen} />
+            
+            {/* Small recording indicator */}
+            {!showControls && (
+              <View style={styles.incognitoIndicator}>
+                <View style={styles.recordingDot} />
+              </View>
+            )}
+            
+            {/* Controls appear on tap */}
+            {showControls && (
+              <SafeAreaView style={styles.incognitoControls}>
+                <View style={styles.incognitoHeader}>
+                  <Text style={styles.incognitoTitle}>🕶️ INCOGNITO MODE</Text>
+                  <Text style={styles.incognitoTime}>{formatTimeDisplay(timeRemaining)}</Text>
+                </View>
+                
+                <View style={styles.incognitoButtons}>
+                  {isRogueMode ? (
+                    <TouchableOpacity
+                      style={styles.incognitoFinishButton}
+                      onPress={handleFinish}
+                    >
+                      <Text style={styles.incognitoButtonText}>FINISH</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.incognitoPauseButton}
+                      onPress={handlePauseResume}
+                    >
+                      <Text style={styles.incognitoButtonText}>
+                        {status === 'running' ? 'PAUSE' : 'RESUME'}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                  
+                  <TouchableOpacity
+                    style={styles.incognitoEndButton}
+                    onPress={handleCancel}
+                  >
+                    <Text style={styles.incognitoEndButtonText}>END SESSION</Text>
+                  </TouchableOpacity>
+                </View>
+                
+                <Text style={styles.incognitoHint}>Tap screen to hide controls</Text>
+              </SafeAreaView>
+            )}
+          </Pressable>
+        ) : (
+          // Normal Mode - Full UI
           <View style={styles.overlay}>
           <SafeAreaView style={styles.safeArea}>
             {/* Top Section */}
@@ -324,6 +415,7 @@ export function TimerScreen({
             </View>
           </SafeAreaView>
         </View>
+        )}
       </CameraView>
     </View>
   );
@@ -532,5 +624,94 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.body,
     color: DS_COLORS.textDisabled, // Very subtle per brand kit
     letterSpacing: 0,
+  },
+  // Incognito Mode Styles
+  incognitoContainer: {
+    flex: 1,
+  },
+  blackScreen: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#000000',
+  },
+  incognitoIndicator: {
+    position: 'absolute',
+    top: 60,
+    right: 24,
+  },
+  recordingDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: DS_COLORS.coral,
+    shadowColor: DS_COLORS.coral,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 8,
+  },
+  incognitoControls: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+    gap: 40,
+  },
+  incognitoHeader: {
+    alignItems: 'center',
+    gap: 16,
+  },
+  incognitoTitle: {
+    fontSize: 16,
+    fontFamily: FONTS.monoMedium,
+    color: DS_COLORS.textSecondary,
+    letterSpacing: 2,
+  },
+  incognitoTime: {
+    fontSize: 64,
+    fontFamily: FONTS.display,
+    color: DS_COLORS.textPrimary,
+    letterSpacing: 4,
+  },
+  incognitoButtons: {
+    width: '100%',
+    gap: 16,
+  },
+  incognitoFinishButton: {
+    backgroundColor: DS_COLORS.amber,
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  incognitoPauseButton: {
+    backgroundColor: DS_COLORS.bgSurfaceLight,
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: DS_COLORS.textSecondary,
+  },
+  incognitoButtonText: {
+    fontSize: 16,
+    fontFamily: FONTS.heading,
+    color: DS_COLORS.textPrimary,
+    letterSpacing: 2,
+  },
+  incognitoEndButton: {
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  incognitoEndButtonText: {
+    fontSize: 13,
+    fontFamily: FONTS.body,
+    color: DS_COLORS.textDisabled,
+  },
+  incognitoHint: {
+    fontSize: 12,
+    fontFamily: FONTS.body,
+    color: DS_COLORS.textMuted,
+    textAlign: 'center',
   },
 });

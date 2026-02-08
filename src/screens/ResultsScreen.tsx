@@ -121,7 +121,7 @@ export function ResultsScreen({ completedSeconds, videoUri, onGoHome }: ResultsS
   };
 
   const getCaption = () => {
-    return `I just Raw Dawg'd ${selectedLocation} 🐕 Speed up 20x for the full effect! @TheRAWDAWGapp #rawdawg #dopaminedetox`;
+    return `I just Raw Dawg'd ${selectedLocation} 🐕 @TheRAWDAWGapp #rawdawg #dopaminedetox`;
   };
 
   const [captionCopied, setCaptionCopied] = useState(false);
@@ -184,18 +184,42 @@ export function ResultsScreen({ completedSeconds, videoUri, onGoHome }: ResultsS
               
               // Small delay to ensure clipboard sync
               setTimeout(async () => {
-                const url = platform === 'tiktok' 
-                  ? 'https://www.tiktok.com/upload'
-                  : 'instagram://camera';
-                
                 console.log(`📤 Opening ${platform}...`);
                 
-                try {
-                  await Linking.openURL(url);
-                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                  setShowCaptionPreview(false);
-                } catch (error) {
-                  if (platform === 'instagram') {
+                if (platform === 'tiktok') {
+                  // Try multiple TikTok URL schemes
+                  const tiktokUrls = [
+                    'tiktok://',
+                    'snssdk1233://',
+                    'https://www.tiktok.com/upload'
+                  ];
+                  
+                  let opened = false;
+                  for (const url of tiktokUrls) {
+                    try {
+                      console.log(`📤 Trying TikTok URL: ${url}`);
+                      await Linking.openURL(url);
+                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                      setShowCaptionPreview(false);
+                      opened = true;
+                      break;
+                    } catch (error) {
+                      console.log(`📤 Failed with ${url}, trying next...`);
+                      continue;
+                    }
+                  }
+                  
+                  if (!opened) {
+                    console.log('📤 ❌ All TikTok URLs failed');
+                  }
+                } else {
+                  // Instagram
+                  try {
+                    await Linking.openURL('instagram://camera');
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                    setShowCaptionPreview(false);
+                  } catch (error) {
+                    console.log('📤 Instagram app couldn\'t be opened, using fallback...');
                     await Linking.openURL('https://www.instagram.com/');
                     setShowCaptionPreview(false);
                   }
@@ -433,16 +457,16 @@ export function ResultsScreen({ completedSeconds, videoUri, onGoHome }: ResultsS
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>
-              {isProcessingVideo ? 'Creating 20x Timelapse... 🎬' : 'Your Caption 📝'}
+              {isProcessingVideo ? 'Saving Video... 📹' : 'Your Caption 📝'}
             </Text>
             
             {isProcessingVideo && (
               <View style={styles.processingContainer}>
                 <Text style={styles.processingText}>
-                  Processing your video with 20x speedup...
+                  Saving video to camera roll...
                 </Text>
                 <Text style={styles.processingSubtext}>
-                  This will take just a few seconds
+                  Just a moment
                 </Text>
               </View>
             )}

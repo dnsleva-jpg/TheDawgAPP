@@ -18,6 +18,7 @@ function AppContent() {
   const [stillnessPercent, setStillnessPercent] = useState<number>(0);
   const [blinksCount, setBlinksCount] = useState<number>(0);
   const [homeKey, setHomeKey] = useState<number>(0);
+  const [incognitoMode, setIncognitoMode] = useState<boolean>(false);
 
   const handleStartSession = (durationSeconds: number) => {
     setSessionDuration(durationSeconds);
@@ -27,7 +28,8 @@ function AppContent() {
     setCurrentScreen('Prepare');
   };
 
-  const handleReady = () => {
+  const handleReady = (incognito?: boolean) => {
+    setIncognitoMode(incognito || false);
     setCurrentScreen('Timer');
   };
 
@@ -101,6 +103,7 @@ function AppContent() {
           durationSeconds={sessionDuration}
           onComplete={handleSessionComplete}
           onCancel={handleCancelSession}
+          incognitoMode={incognitoMode}
         />
       )}
       

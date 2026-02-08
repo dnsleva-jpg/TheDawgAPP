@@ -5,16 +5,19 @@ import {
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
+  Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Camera, CameraView } from 'expo-camera';
+import { Audio } from 'expo-av';
+import * as MediaLibrary from 'expo-media-library';
 import * as Haptics from 'expo-haptics';
 import { COLORS } from '../constants/colors';
 import { COLORS as DS_COLORS, FONTS, RADIUS, SHADOWS } from '../constants/designSystem';
 
 interface PrepareScreenProps {
   durationMinutes: number;
-  onReady: () => void;
+  onReady: (incognitoMode?: boolean) => void;
   onCancel: () => void;
 }
 
@@ -24,22 +27,42 @@ export function PrepareScreen({
   onCancel,
 }: PrepareScreenProps) {
   const [countdown, setCountdown] = useState<number | null>(null);
-  const [hasPermission, setHasPermission] = useState<boolean>(false);
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [isRequestingPermission, setIsRequestingPermission] = useState<boolean>(true);
+  const [incognitoMode, setIncognitoMode] = useState<boolean>(false);
 
   // Request camera permission when screen loads
   useEffect(() => {
-    (async () => {
-      const { status } = await Camera.requestCameraPermissionsAsync();
-      setHasPermission(status === 'granted');
-    })();
+    requestPermissions();
   }, []);
+
+  const requestPermissions = async () => {
+    setIsRequestingPermission(true);
+    
+    // Request camera permission
+    const cameraResult = await Camera.requestCameraPermissionsAsync();
+    
+    // Request microphone permission
+    const audioResult = await Audio.requestPermissionsAsync();
+    
+    // Request media library permission (for saving photos/videos)
+    const mediaResult = await MediaLibrary.requestPermissionsAsync();
+    
+    const allGranted = 
+      cameraResult.status === 'granted' && 
+      audioResult.status === 'granted' &&
+      mediaResult.status === 'granted';
+      
+    setHasPermission(allGranted);
+    setIsRequestingPermission(false);
+  };
 
   useEffect(() => {
     if (countdown === null) return;
 
     if (countdown === 0) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      onReady();
+      onReady(incognitoMode);
       return;
     }
 
@@ -49,12 +72,79 @@ export function PrepareScreen({
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [countdown, onReady]);
+  }, [countdown, onReady, incognitoMode]);
 
   const handleReady = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setCountdown(3);
+    if (incognitoMode) {
+      // Show alert prompting user to enable Do Not Disturb
+      Alert.alert(
+        '🕶️ Incognito Mode',
+        'For the best experience, enable Do Not Disturb mode to prevent notifications.\n\nSwipe down from top-right → Focus → Do Not Disturb',
+        [
+          { 
+            text: 'Cancel', 
+            style: 'cancel' 
+          },
+          {
+            text: "I'm Ready",
+            onPress: () => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              setCountdown(3);
+            }
+          }
+        ]
+      );
+    } else {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      setCountdown(3);
+    }
   };
+
+  // Show loading while requesting permissions
+  if (isRequestingPermission) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar style="light" />
+        <View style={styles.content}>
+          <View style={styles.permissionContainer}>
+            <Text style={styles.permissionTitle}>📸 Permissions Required</Text>
+            <Text style={styles.permissionText}>
+              The Raw Dawg App needs camera, microphone, and photo library access to record your session and save your results.
+            </Text>
+            <Text style={styles.permissionSubtext}>
+              Requesting permissions...
+            </Text>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Show error if permission denied
+  if (hasPermission === false) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar style="light" />
+        <View style={styles.content}>
+          <View style={styles.permissionContainer}>
+            <Text style={styles.permissionTitle}>❌ Permissions Denied</Text>
+            <Text style={styles.permissionText}>
+              To use The Raw Dawg App, please enable Camera, Microphone, and Photos access in:
+            </Text>
+            <Text style={styles.permissionText}>
+              Settings → Privacy & Security → The Raw Dawg App
+            </Text>
+            <TouchableOpacity
+              style={styles.readyButton}
+              onPress={onCancel}
+            >
+              <Text style={styles.readyButtonText}>GO BACK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (countdown !== null) {
     return (
@@ -99,6 +189,29 @@ export function PrepareScreen({
           <InstructionItem text="No phone, no scrolling, no fidgeting" />
           <InstructionItem text="Just exist for the next few minutes" />
         </View>
+
+        {/* Incognito Mode Toggle */}
+        <TouchableOpacity
+          style={styles.incognitoToggle}
+          onPress={() => {
+            setIncognitoMode(!incognitoMode);
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          }}
+          activeOpacity={0.7}
+        >
+          <View style={styles.incognitoContent}>
+            <Text style={styles.incognitoIcon}>🕶️</Text>
+            <View style={styles.incognitoTextContainer}>
+              <Text style={styles.incognitoTitle}>Incognito Mode</Text>
+              <Text style={styles.incognitoSubtitle}>
+                Black screen - no UI, just recording
+              </Text>
+            </View>
+            <View style={[styles.checkbox, incognitoMode && styles.checkboxActive]}>
+              {incognitoMode && <Text style={styles.checkmark}>✓</Text>}
+            </View>
+          </View>
+        </TouchableOpacity>
 
         {/* Buttons */}
         <View style={styles.buttonsContainer}>
@@ -190,6 +303,54 @@ const styles = StyleSheet.create({
     color: DS_COLORS.textSecondary,
     lineHeight: 24, // 1.5-1.7 line height per brand kit
   },
+  // Incognito Mode Toggle
+  incognitoToggle: {
+    backgroundColor: DS_COLORS.bgSurfaceLight,
+    borderRadius: RADIUS.card,
+    padding: 16,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  incognitoContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  incognitoIcon: {
+    fontSize: 24,
+  },
+  incognitoTextContainer: {
+    flex: 1,
+    gap: 2,
+  },
+  incognitoTitle: {
+    fontSize: 16,
+    fontFamily: FONTS.heading,
+    color: DS_COLORS.textPrimary,
+  },
+  incognitoSubtitle: {
+    fontSize: 12,
+    fontFamily: FONTS.body,
+    color: DS_COLORS.textMuted,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: DS_COLORS.textMuted,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxActive: {
+    backgroundColor: DS_COLORS.coral,
+    borderColor: DS_COLORS.coral,
+  },
+  checkmark: {
+    fontSize: 14,
+    fontFamily: FONTS.heading,
+    color: DS_COLORS.textPrimary,
+  },
   buttonsContainer: {
     gap: 12,
   },
@@ -217,6 +378,34 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: FONTS.bodyMedium,
     color: DS_COLORS.textMuted,
+  },
+  // Permission Request Screen
+  permissionContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+    gap: 24,
+  },
+  permissionTitle: {
+    fontSize: 24,
+    fontFamily: FONTS.headingBold,
+    color: DS_COLORS.textPrimary,
+    textAlign: 'center',
+  },
+  permissionText: {
+    fontSize: 16,
+    fontFamily: FONTS.body,
+    color: DS_COLORS.textSecondary,
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  permissionSubtext: {
+    fontSize: 14,
+    fontFamily: FONTS.bodyMedium,
+    color: DS_COLORS.textMuted,
+    textAlign: 'center',
+    marginTop: 8,
   },
   camera: {
     flex: 1,
