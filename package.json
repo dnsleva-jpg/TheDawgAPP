@@ -14,7 +14,7 @@
     "@react-native-masked-view/masked-view": "^0.3.2",
     "babel-preset-expo": "^54.0.10",
     "buffer": "^6.0.3",
-    "expo": "~54.0.32",
+    "expo": "~54.0.33",
     "expo-av": "~16.0.8",
     "expo-camera": "~17.0.10",
     "expo-clipboard": "~8.0.8",

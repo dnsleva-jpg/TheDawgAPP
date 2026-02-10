@@ -36,13 +36,22 @@ export function TimerScreen({
   onCancel,
   incognitoMode = false,
 }: TimerScreenProps) {
+  // #region agent log
+  console.log('🔍 TimerScreen: component mounted, durationSeconds:', durationSeconds, 'incognitoMode:', incognitoMode);
+  // #endregion
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [showControls, setShowControls] = useState(false);
   const [isStoppingRecording, setIsStoppingRecording] = useState(false);
   const cameraRef = useRef<CameraView>(null);
   const recordingPromiseRef = useRef<Promise<any> | null>(null);
+  // #region agent log
+  console.log('🔍 TimerScreen: Before useTimer call, durationSeconds:', durationSeconds);
+  // #endregion
   const { timeRemaining, status, progress, isRogueMode, start, pause, resume, finish } = useTimer(durationSeconds);
+  // #region agent log
+  console.log('🔍 TimerScreen: After useTimer call, timeRemaining:', timeRemaining, 'isRogueMode:', isRogueMode, 'status:', status);
+  // #endregion
   
   // Placeholder stats (will be real later)
   const [stillnessPercent] = useState(Math.floor(Math.random() * (99 - 85 + 1)) + 85);

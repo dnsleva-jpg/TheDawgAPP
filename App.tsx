@@ -98,14 +98,17 @@ function AppContent() {
         />
       )}
       
-      {currentScreen === 'Timer' && (
-        <TimerScreen
-          durationSeconds={sessionDuration}
-          onComplete={handleSessionComplete}
-          onCancel={handleCancelSession}
-          incognitoMode={incognitoMode}
-        />
-      )}
+      {currentScreen === 'Timer' && (() => {
+        console.log('[DEBUG-C] Rendering TimerScreen - sessionDuration:', sessionDuration, 'incognito:', incognitoMode);
+        return (
+          <TimerScreen
+            durationSeconds={sessionDuration}
+            onComplete={handleSessionComplete}
+            onCancel={handleCancelSession}
+            incognitoMode={incognitoMode}
+          />
+        );
+      })()}
       
       {currentScreen === 'Selfie' && (
         <SelfieScreen

@@ -62,6 +62,7 @@ export function PrepareScreen({
 
     if (countdown === 0) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      console.log('[DEBUG-E] PrepareScreen calling onReady - incognito:', incognitoMode, 'durationMin:', durationMinutes);
       onReady(incognitoMode);
       return;
     }
