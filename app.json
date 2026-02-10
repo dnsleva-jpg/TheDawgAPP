@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "raw-dawg-app",
+    "name": "RAW DAWG",
     "slug": "raw-dawg-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -13,10 +13,16 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.anonymous.raw-dawg-app",
+      "icon": "./assets/icon.png",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIRequiresFullScreen": true,
+        "NSCameraUsageDescription": "Raw Dawg needs camera access to verify you stay present during focus sessions.",
+        "NSMicrophoneUsageDescription": "Raw Dawg needs microphone access to record verification videos during focus sessions.",
+        "NSPhotoLibraryUsageDescription": "Raw Dawg needs photo library access to save your session videos.",
+        "NSPhotoLibraryAddUsageDescription": "Raw Dawg needs permission to save your session verification videos to your photo library."
       }
     },
     "android": {
