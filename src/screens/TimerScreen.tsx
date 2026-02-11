@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,10 +9,14 @@ import {
   Pressable,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Camera, CameraView } from 'expo-camera';
+import { useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
+import { Camera } from 'react-native-vision-camera-face-detector';
+import type { FrameFaceDetectionOptions } from 'react-native-vision-camera-face-detector';
 import * as Haptics from 'expo-haptics';
 import * as MediaLibrary from 'expo-media-library';
+import * as FileSystem from 'expo-file-system';
 import { useTimer } from '../hooks/useTimer';
+import { useFaceTracking } from '../hooks/useFaceTracking';
 import { RecordingIndicator } from '../components/RecordingIndicator';
 import { formatTimeDisplay } from '../utils/formatTime';
 import { COLORS } from '../constants/colors';
@@ -36,179 +40,152 @@ export function TimerScreen({
   onCancel,
   incognitoMode = false,
 }: TimerScreenProps) {
-  // #region agent log
-  console.log('🔍 TimerScreen: component mounted, durationSeconds:', durationSeconds, 'incognitoMode:', incognitoMode);
-  // #endregion
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
-  const [isRecording, setIsRecording] = useState(false);
+  const device = useCameraDevice('front');
+  const { hasPermission, requestPermission } = useCameraPermission();
   const [showControls, setShowControls] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
   const [isStoppingRecording, setIsStoppingRecording] = useState(false);
-  const cameraRef = useRef<CameraView>(null);
-  const recordingPromiseRef = useRef<Promise<any> | null>(null);
-  // #region agent log
-  console.log('🔍 TimerScreen: Before useTimer call, durationSeconds:', durationSeconds);
-  // #endregion
+  const [liveStats, setLiveStats] = useState({ stillness: 0, blinks: 0 });
+  const cameraKey = useState(() => `timer-camera-${Date.now()}`)[0];
+
+  const cameraRef = useRef<any>(null);
+  const recordingFinishedResolveRef = useRef<((uri: string | undefined) => void) | null>(null);
+  const lastTempVideoPathRef = useRef<string | null>(null);
+
   const { timeRemaining, status, progress, isRogueMode, start, pause, resume, finish } = useTimer(durationSeconds);
-  // #region agent log
-  console.log('🔍 TimerScreen: After useTimer call, timeRemaining:', timeRemaining, 'isRogueMode:', isRogueMode, 'status:', status);
-  // #endregion
-  
-  // Placeholder stats (will be real later)
-  const [stillnessPercent] = useState(Math.floor(Math.random() * (99 - 85 + 1)) + 85);
-  const [blinksCount] = useState(Math.floor(Math.random() * (25 - 5 + 1)) + 5);
+  const { handleFacesDetected, getResults, reset } = useFaceTracking();
+  const faceDetectionOptions = useRef<FrameFaceDetectionOptions>({
+    performanceMode: 'fast',
+    classificationMode: 'all',
+    landmarkMode: 'none',
+    contourMode: 'none',
+    trackingEnabled: false,
+    minFaceSize: 0.2,
+  }).current;
+
+  useEffect(() => {
+    if (!hasPermission) requestPermission();
+  }, [hasPermission, requestPermission]);
 
   useEffect(() => {
     (async () => {
-      console.log('📹 Requesting permissions...');
-      const cameraPermission = await Camera.requestCameraPermissionsAsync();
-      const mediaLibraryPermission = await MediaLibrary.requestPermissionsAsync();
-      // Mic is optional — video records without audio if mic denied
-      const micPermission = await Camera.requestMicrophonePermissionsAsync();
-      
-      console.log('📹 Camera:', cameraPermission.status);
-      console.log('📹 Microphone:', micPermission.status);
-      console.log('📹 Media Library:', mediaLibraryPermission.status);
-      
-      // Require only camera + media library; mic optional (video records muted without it)
-      const allGranted = cameraPermission.status === 'granted' &&
-        mediaLibraryPermission.status === 'granted';
-      
-      console.log('📹 Permissions granted (camera+media):', allGranted);
-      setHasPermission(allGranted);
+      if (hasPermission) {
+        await MediaLibrary.requestPermissionsAsync();
+      }
     })();
+  }, [hasPermission]);
+
+  // Update live stats every 3 seconds for UI
+  useEffect(() => {
+    if (!hasPermission || status !== 'running') return;
+    const update = () => {
+      const results = getResults();
+      setLiveStats({ stillness: results.stillnessScore, blinks: results.totalBlinks });
+    };
+    const t = setTimeout(update, 1500);
+    const interval = setInterval(update, 3000);
+    return () => {
+      clearTimeout(t);
+      clearInterval(interval);
+    };
+  }, [hasPermission, status, getResults]);
+
+  const cleanupPreviousTempVideo = useCallback(async () => {
+    if (lastTempVideoPathRef.current) {
+      try {
+        const path = lastTempVideoPathRef.current.replace(/^file:\/\//, '');
+        const info = await FileSystem.getInfoAsync(path);
+        if (info.exists) {
+          await FileSystem.deleteAsync(path, { idempotent: true });
+        }
+      } catch (_) {}
+      lastTempVideoPathRef.current = null;
+    }
   }, []);
+
+  const startRecording = useCallback(async () => {
+    if (!cameraRef.current || isRecording) return;
+    await cleanupPreviousTempVideo();
+    try {
+      cameraRef.current.startRecording({
+        videoCodec: 'h265',
+        videoBitRate: 'low',
+        onRecordingFinished: (video: { path: string }) => {
+          const uri = video.path.startsWith('file://') ? video.path : `file://${video.path}`;
+          lastTempVideoPathRef.current = uri;
+          setIsRecording(false);
+          if (recordingFinishedResolveRef.current) {
+            recordingFinishedResolveRef.current(uri);
+            recordingFinishedResolveRef.current = null;
+          }
+        },
+        onRecordingError: (e: any) => {
+          setIsRecording(false);
+          if (recordingFinishedResolveRef.current) {
+            recordingFinishedResolveRef.current(undefined);
+            recordingFinishedResolveRef.current = null;
+          }
+        },
+      });
+      setIsRecording(true);
+    } catch (err) {
+      console.warn('Recording start failed:', err);
+      setIsRecording(false);
+    }
+  }, [isRecording, cleanupPreviousTempVideo]);
 
   useEffect(() => {
     if (hasPermission) {
-      console.log('📹 Timer starting, will begin recording...');
+      reset(); // Clear any stale state from previous session / hot reload
       start();
-      
-      // Give camera time to mount and release from PrepareScreen (Vision Camera) before recording
-      setTimeout(() => {
-        startRecording();
-      }, 1000);
-      
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      setTimeout(() => startRecording(), 800);
     }
-  }, [hasPermission]);
+  }, [hasPermission, reset]);
+
+  const handleComplete = useCallback(async () => {
+    const completedTime = isRogueMode ? timeRemaining : (durationSeconds - timeRemaining);
+    const safeTime = (completedTime < 0 || isNaN(completedTime)) ? 0 : completedTime;
+    const faceResults = getResults();
+
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+    let finalVideoUri: string | undefined;
+    if (isRecording && cameraRef.current) {
+      try {
+        setIsStoppingRecording(true);
+        const videoPromise = new Promise<string | undefined>((r) => {
+          recordingFinishedResolveRef.current = r;
+        });
+        await cameraRef.current.stopRecording();
+        finalVideoUri = await videoPromise;
+      } catch (_) {
+        finalVideoUri = undefined;
+      }
+      setIsStoppingRecording(false);
+      setIsRecording(false);
+    }
+
+    setTimeout(() => {
+      onComplete(safeTime, finalVideoUri, faceResults.stillnessScore, faceResults.totalBlinks);
+    }, 300);
+  }, [isRogueMode, timeRemaining, durationSeconds, isRecording, getResults, onComplete]);
 
   useEffect(() => {
     if (status === 'completed') {
-      // Wait 500ms to capture final stats frame before stopping
-      setTimeout(() => {
-        stopRecording(true).then(() => {
-          console.log('✅ Timer completed, recording stopped, results screen should show');
-        });
-      }, 500);
+      handleComplete();
     }
-  }, [status]);
+  }, [status, handleComplete]);
 
-  const startRecording = async () => {
-    console.log('📹 startRecording() called');
-    console.log('📹 Incognito mode:', incognitoMode);
-    
-    if (!cameraRef.current) {
-      console.log('📹 ERROR: No camera ref available');
-      return;
-    }
-    
-    try {
-      console.log('📹 Attempting to start video recording...');
-      
-      const options = isRogueMode ? {} : { maxDuration: durationSeconds };
-      console.log('📹 Recording options:', options);
-      
-      recordingPromiseRef.current = cameraRef.current.recordAsync(options);
-      setIsRecording(true);
-      console.log('📹 ✅ Recording started!');
-      
-    } catch (error) {
-      console.log('📹 ❌ Recording failed:', error);
+  const cancelRecording = useCallback(async () => {
+    if (isRecording && cameraRef.current) {
+      try {
+        await cameraRef.current.cancelRecording();
+      } catch (_) {}
       setIsRecording(false);
+      recordingFinishedResolveRef.current = null;
     }
-  };
-
-  const stopRecording = async (completed: boolean = false) => {
-    console.log('📹 stopRecording() called, completed:', completed);
-    console.log('📹 isRecording:', isRecording);
-    console.log('📹 Incognito mode:', incognitoMode);
-    console.log('📹 cameraRef.current:', !!cameraRef.current);
-    console.log('📹 recordingPromiseRef.current:', !!recordingPromiseRef.current);
-    
-    // Prevent double-calling
-    if (isStoppingRecording) {
-      console.log('📹 Already stopping recording, ignoring duplicate call');
-      return;
-    }
-    
-    if (!completed) {
-      if (cameraRef.current && isRecording && recordingPromiseRef.current) {
-        try {
-          setIsRecording(false);
-          cameraRef.current.stopRecording();
-          recordingPromiseRef.current = null;
-        } catch (error) {
-          console.log('📹 Error stopping recording:', error);
-        }
-      }
-      return;
-    }
-    
-    // Mark that we're stopping to prevent duplicate calls
-    setIsStoppingRecording(true);
-
-    // Calculate the actual completed time
-    // Rogue mode: timeRemaining counts UP from 0
-    // Normal mode: timeRemaining counts DOWN, so elapsed = durationSeconds - timeRemaining
-    let completedTime = isRogueMode ? timeRemaining : (durationSeconds - timeRemaining);
-    
-    if (completedTime < 0 || isNaN(completedTime)) {
-      console.warn('⚠️ Invalid completedTime detected, using 0');
-      completedTime = 0;
-    }
-    
-    console.log('🐕 TimerScreen - stopRecording debug:');
-    console.log('  isRogueMode:', isRogueMode);
-    console.log('  durationSeconds:', durationSeconds);
-    console.log('  timeRemaining:', timeRemaining);
-    console.log('  completedTime (final):', completedTime);
-    
-    if (!cameraRef.current || !recordingPromiseRef.current) {
-      console.log('📹 No recording to stop');
-      setIsStoppingRecording(false);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      onComplete(completedTime, undefined, stillnessPercent, blinksCount);
-      return;
-    }
-
-    try {
-      console.log('📹 Stopping recording...');
-      cameraRef.current.stopRecording();
-      
-      const video = await recordingPromiseRef.current;
-      console.log('📹 ✅ Recording stopped! Video URI:', video?.uri);
-      
-      setIsRecording(false);
-      setIsStoppingRecording(false);
-      recordingPromiseRef.current = null;
-      
-      if (video?.uri) {
-        console.log('📹 Video recorded, passing stats to selfie screen');
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        onComplete(completedTime, video.uri, stillnessPercent, blinksCount);
-      } else {
-        console.log('📹 ❌ No video URI');
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        onComplete(completedTime, undefined, stillnessPercent, blinksCount);
-      }
-    } catch (error) {
-      console.log('📹 ❌ Error during recording stop:', error);
-      setIsRecording(false);
-      setIsStoppingRecording(false);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      onComplete(completedTime, undefined, stillnessPercent, blinksCount);
-    }
-  };
+  }, [isRecording]);
 
   const handleCancel = () => {
     Alert.alert(
@@ -219,10 +196,9 @@ export function TimerScreen({
         {
           text: 'End & Save',
           style: 'default',
-          onPress: async () => {
+          onPress: () => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-            // Complete with current time (even if session not finished)
-            await stopRecording(true);
+            finish();
           },
         },
         {
@@ -230,9 +206,7 @@ export function TimerScreen({
           style: 'destructive',
           onPress: async () => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-            // Stop recording without saving
-            await stopRecording(false);
-            // Go back to home screen
+            await cancelRecording();
             onCancel();
           },
         },
@@ -250,16 +224,12 @@ export function TimerScreen({
     }
   };
 
-  const handleFinish = async () => {
+  const handleFinish = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     finish();
-    // Wait 500ms for finish() to update the timer state and capture final stats frame
-    setTimeout(async () => {
-      await stopRecording(true);
-    }, 500);
   };
 
-  if (hasPermission === null) {
+  if (hasPermission === null || hasPermission === undefined) {
     return (
       <View style={styles.loadingContainer}>
         <Text style={styles.loadingText}>Requesting camera permission...</Text>
@@ -267,10 +237,12 @@ export function TimerScreen({
     );
   }
 
-  if (hasPermission === false) {
+  if (!hasPermission || !device) {
     return (
       <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Camera and photo library access are required for sessions</Text>
+        <Text style={styles.loadingText}>
+          {!device ? 'No front camera available' : 'Camera access is required for sessions'}
+        </Text>
         <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
           <Text style={styles.cancelButtonText}>Go Back</Text>
         </TouchableOpacity>
@@ -282,12 +254,17 @@ export function TimerScreen({
     <View style={styles.container}>
       <StatusBar style="light" />
       
-      <CameraView 
+      <Camera
+        key={cameraKey}
         ref={cameraRef}
-        style={styles.camera} 
-        facing="front"
-        mode="video"
-      >
+        device={device}
+        isActive={true}
+        style={StyleSheet.absoluteFill}
+        video={true}
+        faceDetectionCallback={handleFacesDetected}
+        faceDetectionOptions={faceDetectionOptions}
+      />
+      <View style={styles.overlay} pointerEvents="box-none">
         {incognitoMode ? (
           // Incognito Mode - Black screen with minimal UI
           <Pressable 
@@ -344,7 +321,7 @@ export function TimerScreen({
           </Pressable>
         ) : (
           // Normal Mode - Full UI
-          <View style={styles.overlay}>
+          <View style={styles.overlayContent}>
           <SafeAreaView style={styles.safeArea}>
             {/* Top Section */}
             <View style={styles.topSection}>
@@ -389,9 +366,9 @@ export function TimerScreen({
                 I Raw Dawg'd for {formatTimeDisplay(isRogueMode ? timeRemaining : durationSeconds - timeRemaining)}
               </Text>
               <View style={styles.statsRow}>
-                <Text style={styles.statsText}>🐕 {stillnessPercent}% still</Text>
+                <Text style={styles.statsText}>🐕 {liveStats.stillness}% still</Text>
                 <Text style={styles.statsDivider}>•</Text>
-                <Text style={styles.statsText}>{blinksCount} blinks</Text>
+                <Text style={styles.statsText}>{liveStats.blinks} blinks</Text>
               </View>
               <Text style={styles.handleText}>@TheRAWDAWGapp</Text>
             </View>
@@ -426,7 +403,7 @@ export function TimerScreen({
           </SafeAreaView>
         </View>
         )}
-      </CameraView>
+      </View>
     </View>
   );
 }
@@ -453,8 +430,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   overlay: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: 'transparent',
+  },
+  overlayContent: {
+    flex: 1,
   },
   safeArea: {
     flex: 1,

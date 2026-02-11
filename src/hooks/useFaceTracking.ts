@@ -62,6 +62,11 @@ export function useFaceTracking() {
   const handleFacesDetected = useCallback((faces: Face[], frame: Frame) => {
     const now = Date.now();
 
+    // Debug: confirm callback is invoked (helps diagnose reload issues)
+    if (__DEV__ && totalFramesRef.current === 0) {
+      console.log('[FaceTracking] First frame received, faces:', faces.length);
+    }
+
     // Initialize session start time on first frame
     if (sessionStartTimeRef.current === null) {
       sessionStartTimeRef.current = now;
@@ -121,10 +126,12 @@ export function useFaceTracking() {
       prevFaceYRef.current = centerY;
 
       // ─── Eye / blink detection ───
+      // ML Kit returns -1 when classificationMode is 'none' or classification failed
       const leftEye = face.leftEyeOpenProbability;
       const rightEye = face.rightEyeOpenProbability;
+      const hasValidEyes = leftEye >= 0 && rightEye >= 0;
 
-      if (leftEye !== undefined && rightEye !== undefined) {
+      if (hasValidEyes) {
         lastLeftEyeRef.current = leftEye;
         lastRightEyeRef.current = rightEye;
 
@@ -187,6 +194,33 @@ export function useFaceTracking() {
 
   // ─── Get final results (called once when session ends) ───
 
+  // ─── Reset state (call when starting a new session) ───
+
+  const reset = useCallback(() => {
+    faceDetectedRef.current = false;
+    totalFramesRef.current = 0;
+    framesWithFaceRef.current = 0;
+    prevFaceXRef.current = null;
+    prevFaceYRef.current = null;
+    stillFramesRef.current = 0;
+    totalMovementDeltaRef.current = 0;
+    blinkStateRef.current = 'open';
+    closedFrameCountRef.current = 0;
+    blinksCountRef.current = 0;
+    lastLeftEyeRef.current = null;
+    lastRightEyeRef.current = null;
+    sessionStartTimeRef.current = null;
+    lastLogTimeRef.current = 0;
+    lastFrameTimeRef.current = 0;
+    faceSecondsRef.current = 0;
+    lastFaceTimestampRef.current = null;
+    lastFaceXRef.current = 0;
+    lastFaceYRef.current = 0;
+    lastDeltaRef.current = 0;
+  }, []);
+
+  // ─── Get final results (called once when session ends) ───
+
   const getResults = useCallback((): FaceTrackingResults => {
     const now = Date.now();
     const totalSessionSeconds = sessionStartTimeRef.current
@@ -229,5 +263,6 @@ export function useFaceTracking() {
   return {
     handleFacesDetected,
     getResults,
+    reset,
   };
 }
