@@ -1,3 +1,7 @@
+// V2 CAMERA NOTE: SelfieScreen uses expo-camera (CameraView) for taking selfie photos.
+// This is separate from TimerScreen's camera usage. When migrating TimerScreen to
+// react-native-vision-camera for frame processing, leave SelfieScreen's expo-camera
+// usage as-is — it only needs basic photo capture, not frame processing.
 import React, { useState, useRef, useCallback } from 'react';
 import {
   View,

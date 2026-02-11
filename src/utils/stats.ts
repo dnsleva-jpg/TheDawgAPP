@@ -1,7 +1,10 @@
 import { Session, UserStats } from '../types';
 
 /**
- * Calculate user stats from sessions
+ * Calculate user stats from sessions.
+ * NOTE: Stats tracking already exists (storage.ts, streakManager.ts, this file).
+ * V2 enhances the existing system with camera-verified metrics (stillnessPercent,
+ * blinksCount) — it does NOT need to be built from scratch.
  */
 export function calculateStats(sessions: Session[]): UserStats {
   if (sessions.length === 0) {
@@ -33,12 +36,21 @@ export function calculateStats(sessions: Session[]): UserStats {
     ? completedSessions[completedSessions.length - 1].date
     : undefined;
 
+  // V2 camera-verified aggregate stats
+  const sessionsWithStillness = completedSessions.filter(s => s.stillnessPercent != null);
+  const avgStillnessPercent = sessionsWithStillness.length > 0
+    ? Math.round(sessionsWithStillness.reduce((sum, s) => sum + (s.stillnessPercent || 0), 0) / sessionsWithStillness.length)
+    : undefined;
+  const totalBlinks = completedSessions.reduce((sum, s) => sum + (s.blinksCount || 0), 0) || undefined;
+
   return {
     totalSessions,
     totalTimeSeconds,
     longestSessionSeconds,
     currentStreak,
     lastSessionDate,
+    avgStillnessPercent,
+    totalBlinks,
   };
 }
 

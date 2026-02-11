@@ -1,3 +1,6 @@
+// PrepareScreen: Pre-session preparation screen (permissions, instructions, countdown).
+// NOTE: This is NOT called "CountdownScreen" — it's PrepareScreen. The countdown is just
+// one phase of this screen. Uses react-native-vision-camera for the 3-2-1 countdown preview.
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -8,8 +11,7 @@ import {
   Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Camera, CameraView } from 'expo-camera';
-import { Audio } from 'expo-av';
+import { Camera, useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
 import * as MediaLibrary from 'expo-media-library';
 import * as Haptics from 'expo-haptics';
 import { COLORS } from '../constants/colors';
@@ -27,35 +29,31 @@ export function PrepareScreen({
   onCancel,
 }: PrepareScreenProps) {
   const [countdown, setCountdown] = useState<number | null>(null);
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [mediaLibraryGranted, setMediaLibraryGranted] = useState<boolean | null>(null);
   const [isRequestingPermission, setIsRequestingPermission] = useState<boolean>(true);
   const [incognitoMode, setIncognitoMode] = useState<boolean>(false);
 
-  // Request camera permission when screen loads
+  // Vision Camera hooks
+  const device = useCameraDevice('front');
+  const { hasPermission: cameraGranted, requestPermission: requestCameraPermission } = useCameraPermission();
+
+  // Request permissions on mount
   useEffect(() => {
-    requestPermissions();
+    (async () => {
+      setIsRequestingPermission(true);
+
+      // Request camera permission via Vision Camera
+      const cameraResult = await requestCameraPermission();
+
+      // Request media library permission (still needed for SelfieScreen photo saving)
+      const mediaResult = await MediaLibrary.requestPermissionsAsync();
+
+      setMediaLibraryGranted(mediaResult.status === 'granted');
+      setIsRequestingPermission(false);
+    })();
   }, []);
 
-  const requestPermissions = async () => {
-    setIsRequestingPermission(true);
-    
-    // Request camera permission
-    const cameraResult = await Camera.requestCameraPermissionsAsync();
-    
-    // Request microphone permission
-    const audioResult = await Audio.requestPermissionsAsync();
-    
-    // Request media library permission (for saving photos/videos)
-    const mediaResult = await MediaLibrary.requestPermissionsAsync();
-    
-    const allGranted = 
-      cameraResult.status === 'granted' && 
-      audioResult.status === 'granted' &&
-      mediaResult.status === 'granted';
-      
-    setHasPermission(allGranted);
-    setIsRequestingPermission(false);
-  };
+  const allPermissionsGranted = cameraGranted && mediaLibraryGranted;
 
   useEffect(() => {
     if (countdown === null) return;
@@ -110,7 +108,7 @@ export function PrepareScreen({
           <View style={styles.permissionContainer}>
             <Text style={styles.permissionTitle}>📸 Permissions Required</Text>
             <Text style={styles.permissionText}>
-              The Raw Dawg App needs camera, microphone, and photo library access to record your session and save your results.
+              The Raw Dawg App needs camera and photo library access to verify your session and save your results.
             </Text>
             <Text style={styles.permissionSubtext}>
               Requesting permissions...
@@ -122,7 +120,7 @@ export function PrepareScreen({
   }
 
   // Show error if permission denied
-  if (hasPermission === false) {
+  if (!allPermissionsGranted) {
     return (
       <SafeAreaView style={styles.container}>
         <StatusBar style="light" />
@@ -130,7 +128,7 @@ export function PrepareScreen({
           <View style={styles.permissionContainer}>
             <Text style={styles.permissionTitle}>❌ Permissions Denied</Text>
             <Text style={styles.permissionText}>
-              To use The Raw Dawg App, please enable Camera, Microphone, and Photos access in:
+              To use The Raw Dawg App, please enable Camera and Photos access in:
             </Text>
             <Text style={styles.permissionText}>
               Settings → Privacy & Security → The Raw Dawg App
@@ -147,19 +145,25 @@ export function PrepareScreen({
     );
   }
 
+  // Countdown phase with camera preview
   if (countdown !== null) {
     return (
       <View style={styles.container}>
         <StatusBar style="light" />
-        {hasPermission ? (
-          <CameraView style={styles.camera} facing="front">
+        {device ? (
+          <>
+            <Camera
+              device={device}
+              isActive={true}
+              style={StyleSheet.absoluteFill}
+            />
             <View style={styles.cameraOverlay}>
               <SafeAreaView style={styles.countdownContainer}>
                 <Text style={styles.countdownText}>{countdown}</Text>
                 <Text style={styles.countdownLabel}>Get ready...</Text>
               </SafeAreaView>
             </View>
-          </CameraView>
+          </>
         ) : (
           <SafeAreaView style={styles.countdownContainer}>
             <Text style={styles.countdownText}>{countdown}</Text>
@@ -205,7 +209,7 @@ export function PrepareScreen({
             <View style={styles.incognitoTextContainer}>
               <Text style={styles.incognitoTitle}>Incognito Mode</Text>
               <Text style={styles.incognitoSubtitle}>
-                Black screen - no UI, just recording
+                Black screen - no UI, just monitoring
               </Text>
             </View>
             <View style={[styles.checkbox, incognitoMode && styles.checkboxActive]}>
@@ -412,7 +416,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   cameraOverlay: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: COLORS.overlay,
   },
   // Brand Kit - Countdown Screen

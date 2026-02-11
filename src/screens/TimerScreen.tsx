@@ -61,18 +61,19 @@ export function TimerScreen({
     (async () => {
       console.log('📹 Requesting permissions...');
       const cameraPermission = await Camera.requestCameraPermissionsAsync();
-      const micPermission = await Camera.requestMicrophonePermissionsAsync();
       const mediaLibraryPermission = await MediaLibrary.requestPermissionsAsync();
+      // Mic is optional — video records without audio if mic denied
+      const micPermission = await Camera.requestMicrophonePermissionsAsync();
       
       console.log('📹 Camera:', cameraPermission.status);
       console.log('📹 Microphone:', micPermission.status);
       console.log('📹 Media Library:', mediaLibraryPermission.status);
       
-      const allGranted = cameraPermission.status === 'granted' && 
-        micPermission.status === 'granted' &&
+      // Require only camera + media library; mic optional (video records muted without it)
+      const allGranted = cameraPermission.status === 'granted' &&
         mediaLibraryPermission.status === 'granted';
       
-      console.log('📹 All permissions granted:', allGranted);
+      console.log('📹 Permissions granted (camera+media):', allGranted);
       setHasPermission(allGranted);
     })();
   }, []);
@@ -82,10 +83,10 @@ export function TimerScreen({
       console.log('📹 Timer starting, will begin recording...');
       start();
       
-      // Give camera a moment to mount before starting recording
+      // Give camera time to mount and release from PrepareScreen (Vision Camera) before recording
       setTimeout(() => {
         startRecording();
-      }, 500);
+      }, 1000);
       
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
@@ -269,7 +270,7 @@ export function TimerScreen({
   if (hasPermission === false) {
     return (
       <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>No access to camera, microphone, or media library</Text>
+        <Text style={styles.loadingText}>Camera and photo library access are required for sessions</Text>
         <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
           <Text style={styles.cancelButtonText}>Go Back</Text>
         </TouchableOpacity>

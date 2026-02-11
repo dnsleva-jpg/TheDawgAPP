@@ -11,9 +11,9 @@ export const COLORS = {
   coral: '#FF4D6A',
   coralGlow: '#FF6B81',
   coralDim: '#CC3D55',
-  amber: '#FFBE0B',
+  amber: '#FFBE0B',          // Also used for V2 score ring (mid-range scores)
   amberGlow: '#FFD166',
-  verified: '#2ECC71',
+  verified: '#2ECC71',       // Also used for V2 score ring (high scores / verified badge)
   verifiedDim: '#27AE60',
   
   // Text Colors

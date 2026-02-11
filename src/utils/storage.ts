@@ -1,3 +1,7 @@
+// Session storage: Already exists and works with AsyncStorage.
+// V2 enhancement: Session type now includes optional stillnessPercent and blinksCount
+// fields. Existing V1 sessions (without these fields) remain backward compatible.
+// No need to rebuild storage from scratch — just save the enhanced Session objects.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Session } from '../types';
 
