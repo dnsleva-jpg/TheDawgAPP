@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,9 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
+import * as Sharing from 'expo-sharing';
+import * as MediaLibrary from 'expo-media-library';
+import ViewShot from 'react-native-view-shot';
 import { formatTimeDisplay, formatRecordTime } from '../utils/formatTime';
 import { COLORS } from '../constants/colors';
 import { COLORS as DS_COLORS, FONTS, BRAND, RADIUS, SHADOWS } from '../constants/designSystem';
@@ -21,16 +24,19 @@ import { UserStats } from '../types';
 import { getSessions } from '../utils/storage';
 import { calculateStats, formatTotalTime } from '../utils/stats';
 import { saveVideoToPhotos } from '../utils/videoProcessor';
+import { ShareCard } from '../components/ShareCard';
+import type { SessionResults } from '../scoring/scoringEngine';
 
 interface ResultsScreenProps {
   completedSeconds: number;
   videoUri?: string;
   stillnessPercent?: number;
   blinksCount?: number;
+  scoringResults?: SessionResults | null;
   onGoHome: () => void;
 }
 
-export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0, blinksCount = 0, onGoHome }: ResultsScreenProps) {
+export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0, blinksCount = 0, scoringResults, onGoHome }: ResultsScreenProps) {
   // Safety check: ensure completedSeconds is valid
   const safeCompletedSeconds = (completedSeconds >= 0 && !isNaN(completedSeconds)) 
     ? completedSeconds 
@@ -39,7 +45,12 @@ export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0
   // Face tracking stats
   const hasStats = stillnessPercent > 0 || blinksCount > 0;
   
-  // Location picker state
+  // Share card state
+  const shareCardRef = useRef<ViewShot>(null);
+  const [showShareCard, setShowShareCard] = useState(false);
+  const [isSharingCard, setIsSharingCard] = useState(false);
+
+  // Location picker state (old share flow fallback)
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [showCaptionPreview, setShowCaptionPreview] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<string>('');
@@ -86,7 +97,56 @@ export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0
 
   const handleShare = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setShowLocationPicker(true);
+    if (scoringResults) {
+      // New share flow: show premium achievement card
+      setShowShareCard(true);
+    } else {
+      // Old share flow: location picker → caption → platform
+      setShowLocationPicker(true);
+    }
+  };
+
+  const captureShareCard = async (): Promise<string | null> => {
+    if (!shareCardRef.current?.capture) return null;
+    try {
+      return await shareCardRef.current.capture();
+    } catch {
+      return null;
+    }
+  };
+
+  const handleShareCard = async () => {
+    setIsSharingCard(true);
+    try {
+      const uri = await captureShareCard();
+      if (uri && (await Sharing.isAvailableAsync())) {
+        await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: 'Share your Raw Dawg score' });
+      }
+    } catch (error: any) {
+      Alert.alert('Share Failed', error?.message ?? 'Could not share the card.');
+    } finally {
+      setIsSharingCard(false);
+    }
+  };
+
+  const handleSaveCard = async () => {
+    setIsSharingCard(true);
+    try {
+      const uri = await captureShareCard();
+      if (!uri) throw new Error('Could not capture card');
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Needed', 'Please allow photo library access to save the card.');
+        return;
+      }
+      await MediaLibrary.createAssetAsync(uri);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert('Saved!', 'Card saved to your camera roll.');
+    } catch (error: any) {
+      Alert.alert('Save Failed', error?.message ?? 'Could not save the card.');
+    } finally {
+      setIsSharingCard(false);
+    }
   };
 
   const handleLocationSelect = (location: { emoji: string; text: string }) => {
@@ -253,76 +313,234 @@ export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0
     onGoHome();
   };
 
+  // Motivational copy — pick once on mount so it doesn't change on re-render
+  const motivationalCopy = useMemo(() => {
+    const score = scoringResults?.rawDawgScore ?? 0;
+    const high = ['Locked in.', 'Built different.', 'Monk mode activated.'];
+    const mid = ['Getting there.', 'Room to grow.', 'Solid foundation.'];
+    const low = ['Everyone starts somewhere.', 'Come back tomorrow.', 'The score doesn\'t lie.'];
+    const pool = score >= 80 ? high : score >= 50 ? mid : low;
+    return pool[Math.floor(Math.random() * pool.length)];
+  }, [scoringResults]);
+
+  // Format duration as M:SS
+  const formatDuration = (sec: number) => {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
+
+  // Grade modifier: turns "B" into "B+", "B", or "B-" based on where the score
+  // falls within that grade band.
+  const getGradeWithModifier = (score: number, baseGrade: string): string => {
+    const bands: { grade: string; min: number; max: number }[] = [
+      { grade: 'S', min: 90, max: 100 },
+      { grade: 'A', min: 80, max: 89 },
+      { grade: 'B', min: 65, max: 79 },
+      { grade: 'C', min: 50, max: 64 },
+      { grade: 'D', min: 30, max: 49 },
+    ];
+    const band = bands.find((b) => b.grade === baseGrade);
+    if (!band) return baseGrade; // F or unknown — no modifier
+    const range = band.max - band.min + 1;
+    const third = range / 3;
+    if (score >= band.min + 2 * third) return `${baseGrade}+`;
+    if (score < band.min + third) return `${baseGrade}-`;
+    return baseGrade;
+  };
+
+  // Color for a score value using the same grade color scale
+  const scoreColor = (value: number): string => {
+    if (value >= 90) return '#8E44AD';
+    if (value >= 80) return '#27AE60';
+    if (value >= 65) return '#2980B9';
+    if (value >= 50) return '#F39C12';
+    if (value >= 30) return '#E67E22';
+    return '#E74C3C';
+  };
+
+  // Sub-score bar helper
+  const SubScoreBar = ({ label, value, color }: { label: string; value: number; color: string }) => (
+    <View style={styles.subScoreRow}>
+      <View style={styles.subScoreLabelRow}>
+        <Text style={styles.subScoreLabel}>{label}</Text>
+        <Text style={[styles.subScoreValue, { color: scoreColor(Math.round(value)) }]}>{Math.round(value)}</Text>
+      </View>
+      <View style={styles.subScoreBarTrack}>
+        <View style={[styles.subScoreBarFill, { width: `${Math.min(100, Math.max(0, value))}%`, backgroundColor: color }]} />
+      </View>
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
       
-      <View style={styles.content}>
-        {/* Success Header */}
-        <View style={styles.header}>
-          <Text style={styles.emoji}>🏆</Text>
-          <Text style={styles.title}>SESSION COMPLETE</Text>
-          <Text style={styles.subtitle}>
-            You did it. You literally did nothing.
-          </Text>
-        </View>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
-        {/* Time Completed */}
-        <View style={styles.timeContainer}>
-          <Text style={styles.timeDisplay}>{formatTimeDisplay(safeCompletedSeconds)}</Text>
-          <Text style={styles.timeLabel}>completed</Text>
-        </View>
+        {/* ── Scoring Layout (when scoringResults exists) ── */}
+        {scoringResults ? (
+          <>
+            {/* 1. Status Header */}
+            <View style={styles.header}>
+              <Text style={styles.title}>SESSION COMPLETE</Text>
+            </View>
 
-        {/* Face Tracking Stats */}
-        {hasStats && (
-          <View style={styles.faceStatsContainer}>
-            <View style={styles.faceStatsRow}>
-              <View style={styles.faceStatItem}>
-                <Text style={styles.faceStatValue}>{stillnessPercent}%</Text>
-                <Text style={styles.faceStatLabel}>stillness</Text>
+            {/* 2. Hero Raw Dawg Score */}
+            <View style={styles.heroContainer}>
+              <View style={styles.heroScoreRow}>
+                <Text style={styles.heroScore}>{Math.round(scoringResults.rawDawgScore)}</Text>
+                <Text style={[styles.heroGrade, { color: scoringResults.color }]}>
+                  {getGradeWithModifier(scoringResults.rawDawgScore, scoringResults.grade)}
+                </Text>
               </View>
-              <View style={styles.faceStatDivider} />
-              <View style={styles.faceStatItem}>
-                <Text style={styles.faceStatValue}>{blinksCount}</Text>
-                <Text style={styles.faceStatLabel}>blinks</Text>
+              <Text style={[styles.heroGradeLabel, { color: scoringResults.color }]}>
+                {scoringResults.label}
+              </Text>
+            </View>
+
+            {/* 3. Sub-Score Progress Bars */}
+            <View style={styles.subScoreCard}>
+              <SubScoreBar label="STILLNESS" value={scoringResults.stillnessScore} color="#e94560" />
+              <SubScoreBar label="FOCUS" value={scoringResults.blinkScore} color="#F39C12" />
+              <SubScoreBar label="DURATION" value={scoringResults.durationScore} color="#27AE60" />
+            </View>
+
+            {/* 4. Stats Row */}
+            <View style={styles.statsRow}>
+              <View style={styles.statItem}>
+                <Text style={styles.statLabel}>STILLNESS</Text>
+                <Text style={[styles.statValue, { color: scoreColor(scoringResults.stillnessScore) }]}>
+                  {Math.round(scoringResults.stillnessPercent)}%
+                </Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={styles.statLabel}>BLINKS</Text>
+                <Text style={[styles.statValue, { color: scoreColor(scoringResults.blinkScore) }]}>
+                  {scoringResults.blinksPerMinute.toFixed(1)}/min
+                </Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={styles.statLabel}>DURATION</Text>
+                <Text style={[styles.statValue, { color: scoreColor(scoringResults.durationScore) }]}>
+                  {formatDuration(safeCompletedSeconds)}
+                </Text>
               </View>
             </View>
-          </View>
+
+            {/* 5. Camera Verified Badge */}
+            <View style={styles.verifiedBadge}>
+              <Text style={styles.verifiedText}>CAMERA VERIFIED</Text>
+            </View>
+
+            {/* 6. Motivational Copy */}
+            <Text style={styles.motivationalText}>{motivationalCopy}</Text>
+          </>
+        ) : (
+          <>
+            {/* ── Fallback Layout (no scoring results) ── */}
+            <View style={styles.header}>
+              <Text style={styles.title}>SESSION COMPLETE</Text>
+              <Text style={styles.timeDisplay}>{formatTimeDisplay(safeCompletedSeconds)}</Text>
+              <Text style={styles.subtitle}>
+                You did absolutely nothing {'\u2014'} and feel better because of it.
+              </Text>
+            </View>
+
+            {hasStats && (
+              <View style={styles.fallbackStatsContainer}>
+                <View style={styles.fallbackStatsRow}>
+                  <View style={styles.fallbackStatItem}>
+                    <Text style={styles.fallbackStatValue}>{stillnessPercent}%</Text>
+                    <Text style={styles.fallbackStatLabel}>stillness</Text>
+                  </View>
+                  <View style={styles.fallbackStatDivider} />
+                  <View style={styles.fallbackStatItem}>
+                    <Text style={styles.fallbackStatValue}>{blinksCount}</Text>
+                    <Text style={styles.fallbackStatLabel}>blinks</Text>
+                  </View>
+                </View>
+              </View>
+            )}
+          </>
         )}
 
-        {/* Stats Grid */}
+        {/* Stats Grid (always shown) */}
         {stats.totalSessions > 0 && (
           <View style={styles.statsSection}>
             <Text style={styles.statsTitle}>Your Progress</Text>
-            <View style={styles.statsGrid}>
-              <View style={styles.miniStatCard}>
-                <Text style={styles.miniStatEmoji}>✓</Text>
-                <Text style={styles.miniStatValue}>{stats.totalSessions}</Text>
-                <Text style={styles.miniStatLabel}>Done</Text>
+            {stats.totalScoredSessions != null && stats.totalScoredSessions > 0 ? (
+              /* ── Scoring-aware layout: BEST | AVG | STREAK | SESSIONS ── */
+              <View style={styles.statsGrid}>
+                <View style={styles.miniStatCard}>
+                  <Text style={styles.miniStatEmoji}>🏆</Text>
+                  <View style={styles.miniStatScoreRow}>
+                    <Text style={[styles.miniStatValue, { color: scoreColor(stats.bestRawDawgScore ?? 0) }]}>
+                      {Math.round(stats.bestRawDawgScore ?? 0)}
+                    </Text>
+                    {stats.bestGrade && (
+                      <Text style={[styles.miniStatGrade, { color: scoreColor(stats.bestRawDawgScore ?? 0) }]}>
+                        {stats.bestGrade}
+                      </Text>
+                    )}
+                  </View>
+                  <Text style={styles.miniStatLabel}>Best</Text>
+                </View>
+
+                <View style={styles.miniStatCard}>
+                  <Text style={styles.miniStatEmoji}>⌀</Text>
+                  <Text style={[styles.miniStatValue, { color: scoreColor(stats.avgRawDawgScore7d ?? 0) }]}>
+                    {stats.avgRawDawgScore7d != null ? Math.round(stats.avgRawDawgScore7d) : '—'}
+                  </Text>
+                  <Text style={styles.miniStatLabel}>Avg 7d</Text>
+                </View>
+
+                <View style={styles.miniStatCard}>
+                  <Text style={styles.miniStatEmoji}>🔥</Text>
+                  <Text style={styles.miniStatValue}>{stats.currentStreak}</Text>
+                  <Text style={styles.miniStatLabel}>Streak</Text>
+                </View>
+
+                <View style={styles.miniStatCard}>
+                  <Text style={styles.miniStatEmoji}>✓</Text>
+                  <Text style={styles.miniStatValue}>{stats.totalSessions}</Text>
+                  <Text style={styles.miniStatLabel}>Sessions</Text>
+                </View>
               </View>
-              
-              <View style={styles.miniStatCard}>
-                <Text style={styles.miniStatEmoji}>⏱️</Text>
-                <Text style={styles.miniStatValue}>
-                  {formatTotalTime(stats.totalTimeSeconds)}
-                </Text>
-                <Text style={styles.miniStatLabel}>Total</Text>
+            ) : (
+              /* ── Fallback layout (no scored sessions): DONE | TOTAL | STREAK | RECORD ── */
+              <View style={styles.statsGrid}>
+                <View style={styles.miniStatCard}>
+                  <Text style={styles.miniStatEmoji}>✓</Text>
+                  <Text style={styles.miniStatValue}>{stats.totalSessions}</Text>
+                  <Text style={styles.miniStatLabel}>Done</Text>
+                </View>
+                
+                <View style={styles.miniStatCard}>
+                  <Text style={styles.miniStatEmoji}>⏱️</Text>
+                  <Text style={styles.miniStatValue}>
+                    {formatTotalTime(stats.totalTimeSeconds)}
+                  </Text>
+                  <Text style={styles.miniStatLabel}>Total</Text>
+                </View>
+                
+                <View style={styles.miniStatCard}>
+                  <Text style={styles.miniStatEmoji}>🔥</Text>
+                  <Text style={styles.miniStatValue}>{stats.currentStreak}</Text>
+                  <Text style={styles.miniStatLabel}>Streak</Text>
+                </View>
+                
+                <View style={styles.miniStatCard}>
+                  <Text style={styles.miniStatEmoji}>🏆</Text>
+                  <Text style={styles.miniStatValue}>
+                    {formatRecordTime(stats.longestSessionSeconds)}
+                  </Text>
+                  <Text style={styles.miniStatLabel}>Record</Text>
+                </View>
               </View>
-              
-              <View style={styles.miniStatCard}>
-                <Text style={styles.miniStatEmoji}>🔥</Text>
-                <Text style={styles.miniStatValue}>{stats.currentStreak}</Text>
-                <Text style={styles.miniStatLabel}>Streak</Text>
-              </View>
-              
-              <View style={styles.miniStatCard}>
-                <Text style={styles.miniStatEmoji}>🏆</Text>
-                <Text style={styles.miniStatValue}>
-                  {formatRecordTime(stats.longestSessionSeconds)}
-                </Text>
-                <Text style={styles.miniStatLabel}>Record</Text>
-              </View>
-            </View>
+            )}
           </View>
         )}
 
@@ -371,7 +589,7 @@ export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0
             <Text style={styles.doneButtonText}>Done</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </ScrollView>
 
       {/* Location Picker Modal */}
       <Modal
@@ -541,102 +759,274 @@ export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0
           </View>
         </View>
       </Modal>
+      {/* Share Card Modal */}
+      <Modal
+        visible={showShareCard}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => !isSharingCard && setShowShareCard(false)}
+      >
+        <View style={styles.shareCardOverlay}>
+          <ScrollView
+            contentContainerStyle={styles.shareCardScrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            {scoringResults && (
+              <ShareCard
+                ref={shareCardRef}
+                scoringResults={scoringResults}
+                completedSeconds={safeCompletedSeconds}
+              />
+            )}
+            <View style={styles.shareCardActions}>
+              <View style={styles.shareCardButtonRow}>
+                <TouchableOpacity
+                  style={styles.shareCardButton}
+                  onPress={handleShareCard}
+                  activeOpacity={0.8}
+                  disabled={isSharingCard}
+                >
+                  <Text style={styles.shareCardButtonText}>SHARE</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.shareCardSaveButton}
+                  onPress={handleSaveCard}
+                  activeOpacity={0.8}
+                  disabled={isSharingCard}
+                >
+                  <Text style={styles.shareCardSaveText}>SAVE</Text>
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity
+                style={styles.shareCardCloseButton}
+                onPress={() => setShowShareCard(false)}
+                activeOpacity={0.8}
+                disabled={isSharingCard}
+              >
+                <Text style={styles.shareCardCloseText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  // Brand Kit - Results Screen
+  // ─── Layout ─────────────────────────────────────────────────────────
   container: {
     flex: 1,
-    backgroundColor: DS_COLORS.bgDeep, // Brand kit background
+    backgroundColor: DS_COLORS.bgDeep,
   },
   content: {
-    flex: 1,
+    flexGrow: 1,
     paddingHorizontal: 24,
-    paddingVertical: 40,
+    paddingTop: 16,
+    paddingBottom: 32,
     justifyContent: 'center',
-    gap: 48,
+    gap: 20,
   },
+
+  // ─── 1. Status Header ──────────────────────────────────────────────
   header: {
     alignItems: 'center',
-    gap: 12,
-  },
-  emoji: {
-    fontSize: 48, // Reduced from 80 per brand kit
+    gap: 4,
   },
   title: {
-    fontSize: 24, // 1.5rem - reduced from 28
-    fontFamily: FONTS.headingBold,
-    color: DS_COLORS.verified, // Green for SESSION COMPLETE per brand kit
-    letterSpacing: 0,
+    fontSize: 14,
+    fontFamily: FONTS.monoMedium,
+    color: DS_COLORS.verified,
+    letterSpacing: 2,
     textAlign: 'center',
     textTransform: 'uppercase',
   },
+
+  // ─── 2. Hero Raw Dawg Score ────────────────────────────────────────
+  heroContainer: {
+    alignItems: 'center',
+    gap: 2,
+  },
+  heroScoreRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 8,
+  },
+  heroScore: {
+    fontSize: 96,
+    fontFamily: FONTS.display,
+    color: DS_COLORS.textPrimary,
+    letterSpacing: 2,
+  },
+  heroGrade: {
+    fontSize: 96,
+    fontFamily: FONTS.display,
+    letterSpacing: 2,
+  },
+  heroGradeLabel: {
+    fontSize: 18,
+    fontFamily: FONTS.heading,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+    marginTop: 4,
+  },
+
+  // ─── 3. Sub-Score Progress Bars ────────────────────────────────────
+  subScoreCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    padding: 16,
+    borderRadius: 12,
+    gap: 14,
+  },
+  subScoreRow: {
+    gap: 6,
+  },
+  subScoreLabelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  subScoreLabel: {
+    fontSize: 14,
+    fontFamily: FONTS.headingMedium,
+    color: DS_COLORS.textSecondary,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  subScoreValue: {
+    fontSize: 14,
+    fontFamily: FONTS.headingMedium,
+    color: DS_COLORS.textPrimary,
+  },
+  subScoreBarTrack: {
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    overflow: 'hidden',
+  },
+  subScoreBarFill: {
+    height: 8,
+    borderRadius: 4,
+  },
+
+  // ─── 4. Stats Row ──────────────────────────────────────────────────
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: DS_COLORS.bgSurface,
+    borderRadius: RADIUS.card,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.04)',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 4,
+  },
+  statLabel: {
+    fontSize: 12,
+    fontFamily: FONTS.body,
+    color: DS_COLORS.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  statValue: {
+    fontSize: 20,
+    fontFamily: FONTS.heading,
+    color: DS_COLORS.textPrimary,
+  },
+  statDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+
+  // ─── 5. Camera Verified Badge ──────────────────────────────────────
+  verifiedBadge: {
+    alignSelf: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 100,
+    borderWidth: 1,
+    borderColor: DS_COLORS.verified,
+  },
+  verifiedText: {
+    fontSize: 11,
+    fontFamily: FONTS.monoMedium,
+    color: DS_COLORS.verified,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+  },
+
+  // ─── 6. Motivational Copy ──────────────────────────────────────────
+  motivationalText: {
+    fontSize: 14,
+    fontFamily: FONTS.body,
+    color: 'rgba(255, 255, 255, 0.5)',
+    textAlign: 'center',
+  },
+
+  // ─── Fallback Layout (no scoring results) ──────────────────────────
   subtitle: {
-    fontSize: 14, // 0.9rem - reduced from 16
+    fontSize: 14,
     fontFamily: FONTS.body,
     color: DS_COLORS.textSecondary,
     textAlign: 'center',
-  },
-  timeContainer: {
-    alignItems: 'center',
-    gap: 8,
+    lineHeight: 20,
+    marginTop: 4,
   },
   timeDisplay: {
-    fontSize: 80, // 5rem - kept large but matching brand kit
-    fontFamily: FONTS.display, // Bebas Neue for time!
-    color: DS_COLORS.textPrimary, // Warm white per brand kit
+    fontSize: 64,
+    fontFamily: FONTS.display,
+    color: DS_COLORS.textPrimary,
     letterSpacing: 2,
   },
-  timeLabel: {
-    fontSize: 13, // 0.8rem - smaller
-    fontFamily: FONTS.monoMedium,
-    color: DS_COLORS.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 2,
-  },
-  faceStatsContainer: {
+  fallbackStatsContainer: {
     alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 32,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
     backgroundColor: DS_COLORS.bgSurface,
     borderRadius: RADIUS.card,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.04)',
   },
-  faceStatsRow: {
+  fallbackStatsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 24,
+    gap: 20,
   },
-  faceStatItem: {
+  fallbackStatItem: {
     alignItems: 'center',
-    gap: 4,
+    gap: 2,
   },
-  faceStatValue: {
-    fontSize: 32,
+  fallbackStatValue: {
+    fontSize: 24,
     fontFamily: FONTS.display,
     color: DS_COLORS.coral,
   },
-  faceStatLabel: {
-    fontSize: 12,
+  fallbackStatLabel: {
+    fontSize: 10,
     fontFamily: FONTS.monoMedium,
     color: DS_COLORS.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
-  faceStatDivider: {
+  fallbackStatDivider: {
     width: 1,
-    height: 40,
+    height: 30,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
+
+  // ─── Your Progress Grid ────────────────────────────────────────────
   statsSection: {
-    gap: 16,
+    gap: 10,
   },
   statsTitle: {
-    fontSize: 14,
-    fontFamily: FONTS.heading,
+    fontSize: 11,
+    fontFamily: FONTS.monoMedium,
     color: DS_COLORS.textSecondary,
     textAlign: 'center',
     textTransform: 'uppercase',
@@ -645,40 +1035,50 @@ const styles = StyleSheet.create({
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 8,
   },
   miniStatCard: {
     flex: 1,
     minWidth: '22%',
-    backgroundColor: DS_COLORS.bgSurface, // Brand kit surface color
-    padding: 12,
-    borderRadius: RADIUS.card, // Brand kit card radius
+    backgroundColor: DS_COLORS.bgSurface,
+    padding: 10,
+    borderRadius: RADIUS.card,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.04)', // Brand kit card border
-    gap: 4,
+    borderColor: 'rgba(255, 255, 255, 0.04)',
+    gap: 2,
   },
   miniStatEmoji: {
-    fontSize: 16,
+    fontSize: 14,
   },
   miniStatValue: {
-    fontSize: 18,
+    fontSize: 16,
     fontFamily: FONTS.monoBold,
     color: DS_COLORS.coral,
   },
   miniStatLabel: {
-    fontSize: 10,
+    fontSize: 9,
     fontFamily: FONTS.bodyMedium,
     color: DS_COLORS.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
+  miniStatScoreRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 3,
+  },
+  miniStatGrade: {
+    fontSize: 11,
+    fontFamily: FONTS.heading,
+    letterSpacing: 0.5,
+  },
   actions: {
-    gap: 12,
+    gap: 10,
   },
   timelapseButton: {
-    backgroundColor: '#9B59B6', // Purple for timelapse
-    paddingVertical: 18,
+    backgroundColor: '#9B59B6',
+    paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
     shadowColor: '#9B59B6',
@@ -699,7 +1099,7 @@ const styles = StyleSheet.create({
   // Brand Kit - Primary CTA Button
   shareButton: {
     backgroundColor: DS_COLORS.coral,
-    paddingVertical: 16,
+    paddingVertical: 14,
     paddingHorizontal: 32,
     borderRadius: RADIUS.button, // 14px per brand kit
     alignItems: 'center',
@@ -718,7 +1118,7 @@ const styles = StyleSheet.create({
   // Brand Kit - Secondary Button (Outline)
   goAgainButton: {
     backgroundColor: 'transparent',
-    paddingVertical: 16,
+    paddingVertical: 12,
     paddingHorizontal: 32,
     borderRadius: RADIUS.button,
     alignItems: 'center',
@@ -732,7 +1132,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0,
   },
   doneButton: {
-    paddingVertical: 16,
+    paddingVertical: 10,
     alignItems: 'center',
   },
   doneButtonText: {
@@ -917,5 +1317,68 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.heading,
     color: DS_COLORS.textPrimary,
     letterSpacing: 0,
+  },
+
+  // ─── Share Card Modal ────────────────────────────────────────────────
+  shareCardOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.92)',
+    justifyContent: 'center',
+  },
+  shareCardScrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+    gap: 20,
+  },
+  shareCardActions: {
+    alignItems: 'center',
+    gap: 12,
+    width: '100%',
+    paddingHorizontal: 48,
+  },
+  shareCardButtonRow: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  shareCardButton: {
+    flex: 1,
+    backgroundColor: DS_COLORS.coral,
+    paddingVertical: 16,
+    borderRadius: RADIUS.button,
+    alignItems: 'center',
+    ...SHADOWS.coralButton,
+  },
+  shareCardButtonText: {
+    fontSize: 16,
+    fontFamily: FONTS.heading,
+    color: DS_COLORS.textPrimary,
+    letterSpacing: 2,
+  },
+  shareCardSaveButton: {
+    flex: 1,
+    backgroundColor: 'transparent',
+    paddingVertical: 16,
+    borderRadius: RADIUS.button,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 77, 106, 0.4)',
+  },
+  shareCardSaveText: {
+    fontSize: 16,
+    fontFamily: FONTS.heading,
+    color: DS_COLORS.coral,
+    letterSpacing: 2,
+  },
+  shareCardCloseButton: {
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  shareCardCloseText: {
+    fontSize: 16,
+    fontFamily: FONTS.bodyMedium,
+    color: DS_COLORS.textSecondary,
   },
 });

@@ -45,6 +45,33 @@ export function calculateStats(sessions: Session[]): UserStats {
     : undefined;
   const totalBlinks = completedSessions.reduce((sum, s) => sum + (s.blinksCount || 0), 0) || undefined;
 
+  // V3 scoring engine aggregate stats
+  const scoredSessions = completedSessions.filter(s => s.rawDawgScore != null);
+  const totalScoredSessions = scoredSessions.length > 0 ? scoredSessions.length : undefined;
+
+  // Best score ever
+  let bestRawDawgScore: number | undefined;
+  let bestGrade: string | undefined;
+  if (scoredSessions.length > 0) {
+    const best = scoredSessions.reduce((prev, curr) =>
+      (curr.rawDawgScore || 0) > (prev.rawDawgScore || 0) ? curr : prev
+    );
+    bestRawDawgScore = best.rawDawgScore;
+    bestGrade = best.grade;
+  }
+
+  // 7-day average (only scored sessions from the last 7 days)
+  let avgRawDawgScore7d: number | undefined;
+  if (scoredSessions.length > 0) {
+    const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const recent = scoredSessions.filter(s => s.timestamp >= sevenDaysAgo);
+    if (recent.length > 0) {
+      avgRawDawgScore7d = Math.round(
+        recent.reduce((sum, s) => sum + (s.rawDawgScore || 0), 0) / recent.length * 10
+      ) / 10;
+    }
+  }
+
   return {
     totalSessions,
     totalTimeSeconds,
@@ -53,6 +80,10 @@ export function calculateStats(sessions: Session[]): UserStats {
     lastSessionDate,
     avgStillnessPercent,
     totalBlinks,
+    bestRawDawgScore,
+    bestGrade,
+    avgRawDawgScore7d,
+    totalScoredSessions,
   };
 }
 

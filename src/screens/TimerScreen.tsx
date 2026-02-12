@@ -21,6 +21,10 @@ import { RecordingIndicator } from '../components/RecordingIndicator';
 import { formatTimeDisplay } from '../utils/formatTime';
 import { COLORS } from '../constants/colors';
 import { COLORS as DS_COLORS, FONTS, BRAND } from '../constants/designSystem';
+import { ScoringEngine } from '../scoring/scoringEngine';
+import type { CalibrationFrame, FaceFrameInput, SessionResults } from '../scoring/scoringEngine';
+import { SCORING_CONFIG } from '../scoring/scoringConfig';
+import type { ScoringConfig } from '../scoring/scoringConfig';
 
 interface TimerScreenProps {
   durationSeconds: number;
@@ -28,7 +32,8 @@ interface TimerScreenProps {
     completedSeconds: number,
     videoUri?: string,
     stillnessPercent?: number,
-    blinksCount?: number
+    blinksCount?: number,
+    scoringResults?: SessionResults
   ) => void;
   onCancel: () => void;
   incognitoMode?: boolean;
@@ -52,6 +57,14 @@ export function TimerScreen({
   const hasCompletedRef = useRef(false);
   const recordingFinishedResolveRef = useRef<((uri: string | undefined) => void) | null>(null);
   const lastTempVideoPathRef = useRef<string | null>(null);
+
+  // Scoring engine refs
+  const scoringEngineRef = useRef<ScoringEngine | null>(null);
+  const calibrationFramesRef = useRef<CalibrationFrame[]>([]);
+  const isEngineCalibrated = useRef(false);
+  const sessionStartTimeRef = useRef<number>(0);
+  const lastStatsUpdateRef = useRef<number>(0);
+  const [isCalibrating, setIsCalibrating] = useState(false);
 
   const { timeRemaining, status, progress, isRogueMode, start, pause, resume, finish } = useTimer(durationSeconds);
   const { handleFacesDetected, getResults, reset } = useFaceTracking();
@@ -86,20 +99,97 @@ export function TimerScreen({
     })();
   }, [hasPermission]);
 
-  // Update live stats every 3 seconds for UI
-  useEffect(() => {
-    if (!hasPermission || status !== 'running') return;
-    const update = () => {
-      const results = getResults();
-      setLiveStats({ stillness: results.stillnessScore, blinks: results.totalBlinks });
-    };
-    const t = setTimeout(update, 1500);
-    const interval = setInterval(update, 3000);
-    return () => {
-      clearTimeout(t);
-      clearInterval(interval);
-    };
-  }, [hasPermission, status, getResults]);
+  // Wrapper face detection callback that feeds both useFaceTracking and ScoringEngine
+  const scoringFaceDetectionCallback = useCallback((faces: any[], frame: any) => {
+    // 1. Feed the existing useFaceTracking hook
+    handleFacesDetected(faces, frame);
+
+    // 2. Feed the ScoringEngine
+    const engine = scoringEngineRef.current;
+    if (!engine) return;
+
+    const now = Date.now();
+    const elapsedMs = now - sessionStartTimeRef.current;
+
+    // #region agent log — H-E: callback invoked + face count
+    if (elapsedMs < 500 || (elapsedMs % 5000 < 200)) console.log(`[DBG-E] cb elapsed=${elapsedMs}ms faces=${faces.length} calibrated=${isEngineCalibrated.current} calFrames=${calibrationFramesRef.current.length}`);
+    // #endregion
+
+    if (faces.length > 0) {
+      const face = faces[0];
+
+      // #region agent log — H-B: raw face data from MLKit
+      if (elapsedMs < 500) console.log(`[DBG-B] MLKit keys=${Object.keys(face).join(',')} yaw=${face.yawAngle} pitch=${face.pitchAngle} leftEye=${face.leftEyeOpenProbability} rightEye=${face.rightEyeOpenProbability}`);
+      // #endregion
+
+      const faceData: FaceFrameInput = {
+        yaw: face.yawAngle ?? 0,
+        pitch: face.pitchAngle ?? 0,
+        roll: face.rollAngle ?? 0,
+        faceX: face.bounds ? face.bounds.x + face.bounds.width / 2 : 0,
+        faceY: face.bounds ? face.bounds.y + face.bounds.height / 2 : 0,
+        leftEyeOpenProbability: face.leftEyeOpenProbability ?? -1,
+        rightEyeOpenProbability: face.rightEyeOpenProbability ?? -1,
+        timestamp: now,
+      };
+
+      if (!isEngineCalibrated.current) {
+        // Collecting calibration frames during first 10 seconds
+        calibrationFramesRef.current.push({
+          timestamp: now,
+          yaw: faceData.yaw,
+          pitch: faceData.pitch,
+          roll: faceData.roll,
+          faceX: faceData.faceX,
+          faceY: faceData.faceY,
+        });
+
+        if (elapsedMs >= 3000 && calibrationFramesRef.current.length > 0) {
+          // #region agent log — H-A: calibration trigger
+          console.log(`[DBG-A] CALIBRATION triggered frames=${calibrationFramesRef.current.length} elapsed=${elapsedMs}ms`);
+          // #endregion
+          engine.calibrate(calibrationFramesRef.current);
+          isEngineCalibrated.current = true;
+          setIsCalibrating(false);
+        }
+      } else {
+        // Engine is calibrated — process frame
+        const result = engine.processFrame(faceData);
+
+        // #region agent log — H-C: processFrame output (sampled)
+        if (elapsedMs % 5000 < 200) console.log(`[DBG-C] frame stillness=${result.currentStillness} blinks=${result.blinkCount} score=${result.frameScore.toFixed(3)}`);
+        // #endregion
+
+        // Throttle UI updates to every 500ms
+        // liveStillness = fast EMA of per-frame score (real-time feedback)
+        if (now - lastStatsUpdateRef.current >= 500) {
+          lastStatsUpdateRef.current = now;
+          setLiveStats({
+            stillness: result.liveStillness,
+            blinks: result.blinkCount,
+          });
+        }
+      }
+    } else {
+      // No face detected
+      if (isEngineCalibrated.current) {
+        const result = engine.processFrame(null);
+
+        if (now - lastStatsUpdateRef.current >= 500) {
+          lastStatsUpdateRef.current = now;
+          setLiveStats({
+            stillness: result.liveStillness,
+            blinks: result.blinkCount,
+          });
+        }
+      } else if (elapsedMs >= 3000 && calibrationFramesRef.current.length > 0) {
+        // Calibrate even if face is lost right at the boundary
+        engine.calibrate(calibrationFramesRef.current);
+        isEngineCalibrated.current = true;
+        setIsCalibrating(false);
+      }
+    }
+  }, [handleFacesDetected]);
 
   const cleanupPreviousTempVideo = useCallback(async () => {
     if (lastTempVideoPathRef.current) {
@@ -152,6 +242,12 @@ export function TimerScreen({
     if (hasPermission) {
       reset();
       start();
+      // Instantiate scoring engine
+      scoringEngineRef.current = new ScoringEngine(SCORING_CONFIG as unknown as ScoringConfig);
+      calibrationFramesRef.current = [];
+      isEngineCalibrated.current = false;
+      sessionStartTimeRef.current = Date.now();
+      setIsCalibrating(true);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       setTimeout(() => startRecording(), 800);
     }
@@ -189,7 +285,24 @@ export function TimerScreen({
     setIsRecording(false);
     setIsStoppingRecording(false);
 
-    onComplete(completedTime, finalVideoUri, faceResults.stillnessScore, faceResults.totalBlinks);
+    // Get scoring engine results
+    const durationMinutes = completedTime / 60;
+    // For Rogue Mode there's no committed time — pass undefined so the engine
+    // falls back to the old formula without a completion ratio penalty.
+    const committedSeconds = rogue ? undefined : durationSeconds;
+    const scoringResults = scoringEngineRef.current?.getSessionResults(durationMinutes, committedSeconds);
+
+    // #region agent log — H-D: session results at completion
+    console.log(`[DBG-D] COMPLETE dur=${durationMinutes.toFixed(2)}min committed=${committedSeconds ?? 'N/A'}s rogue=${rogue} calibrated=${isEngineCalibrated.current} engineBlinks=${scoringResults?.blinksPerMinute ?? 'N/A'} hookBlinks=${faceResults.totalBlinks} stillness=${scoringResults?.stillnessPercent ?? 'N/A'} grade=${scoringResults?.grade ?? 'N/A'} score=${scoringResults?.rawDawgScore ?? 'N/A'} durScore=${scoringResults?.durationScore ?? 'N/A'}`);
+    // #endregion
+
+    onComplete(
+      completedTime,
+      finalVideoUri,
+      scoringResults?.stillnessPercent ?? faceResults.stillnessScore,
+      scoringResults ? Math.round(scoringResults.blinksPerMinute * durationMinutes) : faceResults.totalBlinks,
+      scoringResults
+    );
   }, [durationSeconds, getResults, onComplete]);
 
   useEffect(() => {
@@ -282,7 +395,7 @@ export function TimerScreen({
         isActive={true}
         style={StyleSheet.absoluteFill}
         video={true}
-        faceDetectionCallback={handleFacesDetected}
+        faceDetectionCallback={scoringFaceDetectionCallback}
         faceDetectionOptions={faceDetectionOptions}
       />
       <View style={styles.overlay} pointerEvents="box-none">
@@ -365,6 +478,10 @@ export function TimerScreen({
                 </Text>
               </View>
               
+              {isCalibrating && (
+                <Text style={styles.calibratingText}>Calibrating...</Text>
+              )}
+
               {!isRogueMode && (
                 <View style={styles.progressBarContainer}>
                   <View
@@ -541,6 +658,14 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0, 0, 0, 0.8)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
+  },
+  calibratingText: {
+    fontSize: 12,
+    fontFamily: FONTS.monoMedium,
+    color: DS_COLORS.textMuted,
+    letterSpacing: 1,
+    marginTop: -16,
+    marginBottom: 8,
   },
   progressBarContainer: {
     width: '100%',

@@ -2,7 +2,7 @@
 // This is separate from TimerScreen's camera usage. When migrating TimerScreen to
 // react-native-vision-camera for frame processing, leave SelfieScreen's expo-camera
 // usage as-is — it only needs basic photo capture, not frame processing.
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -17,17 +17,43 @@ import { CameraView } from 'expo-camera';
 import { StatusBar } from 'expo-status-bar';
 import * as Haptics from 'expo-haptics';
 import * as MediaLibrary from 'expo-media-library';
+import * as Sharing from 'expo-sharing';
 import ViewShot from 'react-native-view-shot';
 import { formatTimeDisplay } from '../utils/formatTime';
 import { COLORS } from '../constants/colors';
 import { COLORS as DS_COLORS, FONTS, BRAND } from '../constants/designSystem';
+import type { SessionResults } from '../scoring/scoringEngine';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+// ─── Grade modifier (same logic as ResultsScreen/ShareCard) ──────────────────
+function getGradeWithModifier(score: number, baseGrade: string): string {
+  const bands: { grade: string; min: number; max: number }[] = [
+    { grade: 'S', min: 90, max: 100 },
+    { grade: 'A', min: 80, max: 89 },
+    { grade: 'B', min: 65, max: 79 },
+    { grade: 'C', min: 50, max: 64 },
+    { grade: 'D', min: 30, max: 49 },
+  ];
+  const band = bands.find((b) => b.grade === baseGrade);
+  if (!band) return baseGrade;
+  const range = band.max - band.min + 1;
+  const third = range / 3;
+  if (score >= band.min + 2 * third) return `${baseGrade}+`;
+  if (score < band.min + third) return `${baseGrade}-`;
+  return baseGrade;
+}
+
+function gradeColor(grade: string): string {
+  const colors: Record<string, string> = { S: '#8E44AD', A: '#27AE60', B: '#2980B9', C: '#F39C12', D: '#E67E22', F: '#E74C3C' };
+  return colors[grade.charAt(0)] ?? '#F39C12';
+}
 
 interface SelfieScreenProps {
   completedSeconds: number;
   stillnessPercent: number;
   blinksCount: number;
+  scoringResults?: SessionResults | null;
   onComplete: () => void;
 }
 
@@ -35,6 +61,7 @@ export function SelfieScreen({
   completedSeconds,
   stillnessPercent,
   blinksCount,
+  scoringResults,
   onComplete,
 }: SelfieScreenProps) {
   const cameraRef = useRef<CameraView>(null);
@@ -84,55 +111,58 @@ export function SelfieScreen({
     }
   };
 
-  // ─── STEP 2: Capture the preview (photo + stats together) using view-shot ───
-  const handleSaveWithStats = useCallback(async () => {
-    if (!viewShotRef.current || isProcessing) return;
-
+  // ─── Capture helper ───
+  const captureSelfie = useCallback(async (): Promise<string | null> => {
+    if (!viewShotRef.current?.capture) return null;
+    // Small delay to make sure the Image is fully rendered
+    await new Promise((resolve) => setTimeout(resolve, 300));
     try {
-      setIsProcessing(true);
+      return await viewShotRef.current.capture();
+    } catch {
+      return null;
+    }
+  }, []);
+
+  // ─── SHARE selfie (opens native share sheet) ───
+  const handleShareSelfie = useCallback(async () => {
+    if (isProcessing) return;
+    setIsProcessing(true);
+    try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
-      
-
-      // Small delay to make sure the Image is fully rendered
-      await new Promise((resolve) => setTimeout(resolve, 300));
-
-      // react-native-view-shot captures EVERYTHING inside the <ViewShot> wrapper
-      // Since the photo is now a regular <Image> (not native camera), it works!
-      if (!viewShotRef.current?.capture) {
-        throw new Error('ViewShot ref not ready');
+      const uri = await captureSelfie();
+      if (!uri) throw new Error('Could not capture selfie');
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, { mimeType: 'image/jpeg', dialogTitle: 'Share your detox selfie' });
       }
-      const uri = await viewShotRef.current.capture();
+    } catch (error: any) {
+      Alert.alert('Share Failed', error?.message ?? 'Could not share.');
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [isProcessing, captureSelfie]);
 
-      if (!uri) {
-        throw new Error('ViewShot capture returned no URI');
-      }
-
-      
-
-      // Request media library permissions
+  // ─── SAVE selfie to camera roll ───
+  const handleSaveSelfie = useCallback(async () => {
+    if (isProcessing) return;
+    setIsProcessing(true);
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      const uri = await captureSelfie();
+      if (!uri) throw new Error('Could not capture selfie');
       const { status } = await MediaLibrary.requestPermissionsAsync();
       if (status !== 'granted') {
-        throw new Error('Media library permission not granted');
+        Alert.alert('Permission Needed', 'Please allow photo library access to save.');
+        return;
       }
-
-      // Save the combined image (photo + stats) to camera roll
       await MediaLibrary.createAssetAsync(uri);
-      
-
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-      Alert.alert(
-        '✅ Photo Saved!',
-        'Your selfie with stats is saved to your camera roll! Share it on your story 🐕',
-        [{ text: 'Done!', onPress: onComplete }]
-      );
+      Alert.alert('Saved!', 'Selfie saved to your camera roll.', [{ text: 'Done!', onPress: onComplete }]);
     } catch (error: any) {
-      
+      Alert.alert('Save Failed', error?.message ?? 'Could not save.');
+    } finally {
       setIsProcessing(false);
-      Alert.alert('Save Failed', `Failed to save photo: ${error?.message ?? 'Unknown error'}`);
     }
-  }, [isProcessing, onComplete]);
+  }, [isProcessing, captureSelfie, onComplete]);
 
   // ─── Go back to camera to retake ───
   const handleRetake = () => {
@@ -146,32 +176,61 @@ export function SelfieScreen({
     onComplete();
   };
 
+  // Format duration as M:SS
+  const formatDuration = (sec: number) => {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
+
   // ═══════════════════════════════════════════════
   //  THE STATS OVERLAY (brand kit share card design)
   // ═══════════════════════════════════════════════
   const StatsOverlay = () => (
     <View style={styles.statsContainer}>
-      {/* CAMERA VERIFIED Badge */}
+      {/* CAMERA VERIFIED DETOX Badge */}
       <View style={styles.verifiedBadge}>
         <View style={styles.verifiedDot} />
-        <Text style={styles.verifiedText}>CAMERA VERIFIED</Text>
+        <Text style={styles.verifiedText}>CAMERA VERIFIED DETOX</Text>
       </View>
 
-      {/* Header Text */}
-      <Text style={styles.statsTitle}>I Raw Dawg'd for</Text>
-      
-      {/* Time Display */}
-      <Text style={styles.statsTime}>{formatTimeDisplay(completedSeconds)}</Text>
+      {scoringResults ? (
+        <>
+          {/* Score + Grade */}
+          <View style={styles.scoreRow}>
+            <Text style={styles.statsScore}>{Math.round(scoringResults.rawDawgScore)}</Text>
+            <Text style={[styles.statsGrade, { color: gradeColor(scoringResults.grade) }]}>
+              {getGradeWithModifier(scoringResults.rawDawgScore, scoringResults.grade)}
+            </Text>
+          </View>
 
-      {/* Stat Chips */}
-      <View style={styles.statsChipsRow}>
-        <View style={styles.statChip}>
-          <Text style={styles.statChipText}>🐕 {stillnessPercent}% still</Text>
-        </View>
-        <View style={styles.statChip}>
-          <Text style={styles.statChipText}>{blinksCount} blinks</Text>
-        </View>
-      </View>
+          {/* Stat Chips */}
+          <View style={styles.statsChipsRow}>
+            <View style={styles.statChip}>
+              <Text style={styles.statChipText}>🐶 {Math.round(scoringResults.stillnessPercent)}% still</Text>
+            </View>
+            <View style={styles.statChip}>
+              <Text style={styles.statChipText}>👁 {scoringResults.blinksPerMinute.toFixed(0)}/min</Text>
+            </View>
+            <View style={styles.statChip}>
+              <Text style={styles.statChipText}>⏱ {formatDuration(completedSeconds)}</Text>
+            </View>
+          </View>
+        </>
+      ) : (
+        <>
+          {/* Fallback: old overlay */}
+          <Text style={styles.statsTime}>{formatTimeDisplay(completedSeconds)}</Text>
+          <View style={styles.statsChipsRow}>
+            <View style={styles.statChip}>
+              <Text style={styles.statChipText}>🐕 {stillnessPercent}% still</Text>
+            </View>
+            <View style={styles.statChip}>
+              <Text style={styles.statChipText}>{blinksCount} blinks</Text>
+            </View>
+          </View>
+        </>
+      )}
 
       {/* Coral Gradient Divider */}
       <View style={styles.coralDivider} />
@@ -222,18 +281,24 @@ export function SelfieScreen({
         {/* Buttons sit OUTSIDE ViewShot so they don't appear in the saved image */}
         <SafeAreaView style={styles.previewButtonsContainer}>
           <View style={styles.previewButtons}>
-            <TouchableOpacity
-              style={[styles.button, styles.takePhotoButton]}
-              onPress={handleSaveWithStats}
-              disabled={isProcessing}
-              activeOpacity={0.8}
-              accessibilityLabel="Save photo with stats"
-              accessibilityRole="button"
-            >
-              <Text style={styles.takePhotoButtonText}>
-                {isProcessing ? 'SAVING...' : '✅ SAVE WITH STATS'}
-              </Text>
-            </TouchableOpacity>
+            <View style={styles.shareSaveRow}>
+              <TouchableOpacity
+                style={[styles.button, styles.takePhotoButton, { flex: 1 }]}
+                onPress={handleShareSelfie}
+                disabled={isProcessing}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.takePhotoButtonText}>SHARE</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, styles.retakeButton, { flex: 1 }]}
+                onPress={handleSaveSelfie}
+                disabled={isProcessing}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.retakeButtonText}>SAVE</Text>
+              </TouchableOpacity>
+            </View>
 
             <TouchableOpacity
               style={[styles.button, styles.retakeButton]}
@@ -241,7 +306,7 @@ export function SelfieScreen({
               disabled={isProcessing}
               activeOpacity={0.8}
             >
-              <Text style={styles.retakeButtonText}>🔄 RETAKE</Text>
+              <Text style={styles.retakeButtonText}>RETAKE</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -288,7 +353,7 @@ export function SelfieScreen({
                 activeOpacity={0.8}
               >
                 <Text style={styles.takePhotoButtonText}>
-                  {!cameraReady ? 'LOADING CAMERA...' : isProcessing ? 'CAPTURING...' : '📸 TAKE PHOTO'}
+                  {!cameraReady ? 'LOADING CAMERA...' : isProcessing ? 'CAPTURING...' : '📸 PROOF OF DETOX'}
                 </Text>
               </TouchableOpacity>
 
@@ -405,22 +470,48 @@ const styles = StyleSheet.create({
   
   // Header
   statsTitle: {
-    fontSize: 13, // 0.8rem = ~13px
-    fontFamily: FONTS.body,
+    fontSize: 14,
+    fontFamily: FONTS.heading,
     color: DS_COLORS.textSecondary,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
     marginBottom: 4,
   },
-  
-  // Time Display (Hero) - Fixed to fit on one line
-  statsTime: {
-    fontSize: 64, // Reduced from 80 to fit on one line
-    fontFamily: FONTS.display, // Bebas Neue for hero time!
+
+  // Score + Grade row
+  scoreRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 8,
+    marginBottom: 4,
+  },
+  statsScore: {
+    fontSize: 48,
+    fontFamily: FONTS.display,
     color: DS_COLORS.textPrimary,
     letterSpacing: 2,
-    lineHeight: 64, // Match font size for single line
+  },
+  statsGrade: {
+    fontSize: 48,
+    fontFamily: FONTS.display,
+    letterSpacing: 2,
+  },
+  
+  // Time Display (Hero) - Fallback when no scoring
+  statsTime: {
+    fontSize: 64,
+    fontFamily: FONTS.display,
+    color: DS_COLORS.textPrimary,
+    letterSpacing: 2,
     textShadowColor: 'rgba(255, 77, 106, 0.15)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 20,
+  },
+
+  // Share + Save row
+  shareSaveRow: {
+    flexDirection: 'row',
+    gap: 12,
   },
   
   // Stat Chips

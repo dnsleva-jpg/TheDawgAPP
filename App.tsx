@@ -9,6 +9,7 @@ import { saveSession } from './src/utils/storage';
 import { getDateString } from './src/utils/stats';
 import { updateStreakAfterSession } from './src/utils/streakManager';
 import { AppLoader } from './src/components/AppLoader';
+import type { SessionResults } from './src/scoring/scoringEngine';
 
 function AppContent() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('Home');
@@ -19,12 +20,14 @@ function AppContent() {
   const [blinksCount, setBlinksCount] = useState<number>(0);
   const [homeKey, setHomeKey] = useState<number>(0);
   const [incognitoMode, setIncognitoMode] = useState<boolean>(false);
+  const [scoringResults, setScoringResults] = useState<SessionResults | null>(null);
 
   const handleStartSession = (durationSeconds: number) => {
     setSessionDuration(durationSeconds);
     setVideoUri(undefined); // Reset video from previous session
     setStillnessPercent(0); // Reset stats from previous session
     setBlinksCount(0);
+    setScoringResults(null);
     setCurrentScreen('Prepare');
   };
 
@@ -37,14 +40,20 @@ function AppContent() {
     seconds: number,
     videoUri?: string,
     stillness?: number,
-    blinks?: number
+    blinks?: number,
+    sessionScoringResults?: SessionResults
   ) => {
     setCompletedSeconds(seconds);
     setVideoUri(videoUri);
-    setStillnessPercent(stillness || 0);
-    setBlinksCount(blinks || 0);
+    setScoringResults(sessionScoringResults ?? null);
+    setStillnessPercent(sessionScoringResults?.stillnessPercent ?? stillness ?? 0);
+    setBlinksCount(
+      sessionScoringResults
+        ? Math.round(sessionScoringResults.blinksPerMinute * (seconds / 60))
+        : (blinks ?? 0)
+    );
     
-    // Save session to storage
+    // Save session to storage (including V3 scoring results when available)
     const session: Session = {
       id: Date.now().toString(),
       duration: seconds,
@@ -52,8 +61,19 @@ function AppContent() {
       timestamp: Date.now(),
       isRogueMode: sessionDuration === -1,
       completed: true,
-      stillnessPercent: stillness || 0,
-      blinksCount: blinks || 0,
+      stillnessPercent: sessionScoringResults?.stillnessPercent ?? stillness ?? 0,
+      blinksCount: sessionScoringResults
+        ? Math.round(sessionScoringResults.blinksPerMinute * (seconds / 60))
+        : (blinks ?? 0),
+      rawDawgScore: sessionScoringResults?.rawDawgScore,
+      stillnessScore: sessionScoringResults?.stillnessScore,
+      blinkScore: sessionScoringResults?.blinkScore,
+      durationScore: sessionScoringResults?.durationScore,
+      grade: sessionScoringResults?.grade,
+      gradeLabel: sessionScoringResults?.label,
+      blinksPerMinute: sessionScoringResults?.blinksPerMinute,
+      facePresencePercent: sessionScoringResults?.facePresencePercent,
+      committedDuration: sessionDuration > 0 ? sessionDuration : undefined,
     };
     
     try {
@@ -115,6 +135,7 @@ function AppContent() {
           completedSeconds={completedSeconds}
           stillnessPercent={stillnessPercent}
           blinksCount={blinksCount}
+          scoringResults={scoringResults}
           onComplete={handleSelfieComplete}
         />
       )}
@@ -125,6 +146,7 @@ function AppContent() {
           videoUri={videoUri}
           stillnessPercent={stillnessPercent}
           blinksCount={blinksCount}
+          scoringResults={scoringResults}
           onGoHome={handleGoHome}
         />
       )}
