@@ -25,8 +25,10 @@ export function calculateStats(sessions: Session[]): UserStats {
   // Total time
   const totalTimeSeconds = completedSessions.reduce((sum, s) => sum + s.duration, 0);
 
-  // Longest session
-  const longestSessionSeconds = Math.max(...completedSessions.map(s => s.duration));
+  // Longest session (guard against empty array — Math.max(...[]) returns -Infinity)
+  const longestSessionSeconds = completedSessions.length > 0
+    ? Math.max(...completedSessions.map(s => s.duration || 0))
+    : 0;
 
   // Calculate current streak
   const currentStreak = calculateCurrentStreak(completedSessions);

@@ -164,8 +164,8 @@ export function useFaceTracking() {
     }
 
     // ─── Console log every 5 seconds ───
-    if (now - lastLogTimeRef.current >= LOG_INTERVAL_MS) {
-      const elapsed = (now - sessionStartTimeRef.current!) / 1000;
+    if (__DEV__ && now - lastLogTimeRef.current >= LOG_INTERVAL_MS && sessionStartTimeRef.current !== null) {
+      const elapsed = (now - sessionStartTimeRef.current) / 1000;
       const stillness = framesWithFaceRef.current > 0
         ? Math.round((stillFramesRef.current / framesWithFaceRef.current) * 100)
         : 0;
@@ -244,18 +244,20 @@ export function useFaceTracking() {
       presencePercent,
     };
 
-    console.log('[FaceTracking] Session ended. Final results:', results);
-    console.log('[FaceTracking] Raw data:', {
-      totalFrames: totalFramesRef.current,
-      framesWithFace: framesWithFaceRef.current,
-      stillFrames: stillFramesRef.current,
-      totalMovementDelta: totalMovementDeltaRef.current.toFixed(1),
-      avgDeltaPerFrame: framesWithFaceRef.current > 1
-        ? (totalMovementDeltaRef.current / (framesWithFaceRef.current - 1)).toFixed(2)
-        : '0',
-      faceSeconds: faceSecondsRef.current.toFixed(1),
-      totalSessionSeconds: totalSessionSeconds.toFixed(1),
-    });
+    if (__DEV__) {
+      console.log('[FaceTracking] Session ended. Final results:', results);
+      console.log('[FaceTracking] Raw data:', {
+        totalFrames: totalFramesRef.current,
+        framesWithFace: framesWithFaceRef.current,
+        stillFrames: stillFramesRef.current,
+        totalMovementDelta: totalMovementDeltaRef.current.toFixed(1),
+        avgDeltaPerFrame: framesWithFaceRef.current > 1
+          ? (totalMovementDeltaRef.current / (framesWithFaceRef.current - 1)).toFixed(2)
+          : '0',
+        faceSeconds: faceSecondsRef.current.toFixed(1),
+        totalSessionSeconds: totalSessionSeconds.toFixed(1),
+      });
+    }
 
     return results;
   }, []);

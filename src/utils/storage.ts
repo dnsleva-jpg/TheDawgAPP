@@ -16,7 +16,7 @@ export async function saveSession(session: Session): Promise<void> {
     sessions.push(session);
     await AsyncStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions));
   } catch (error) {
-    console.error('Error saving session:', error);
+    // Silently fail — session not saved but app continues
   }
 }
 
@@ -27,11 +27,14 @@ export async function getSessions(): Promise<Session[]> {
   try {
     const data = await AsyncStorage.getItem(SESSIONS_KEY);
     if (data) {
-      return JSON.parse(data);
+      const parsed = JSON.parse(data);
+      // Validate that parsed data is an array
+      if (!Array.isArray(parsed)) return [];
+      return parsed;
     }
     return [];
   } catch (error) {
-    console.error('Error loading sessions:', error);
+    // Corrupted data — return empty and don't crash
     return [];
   }
 }
@@ -43,6 +46,6 @@ export async function clearSessions(): Promise<void> {
   try {
     await AsyncStorage.removeItem(SESSIONS_KEY);
   } catch (error) {
-    console.error('Error clearing sessions:', error);
+    // Silently fail
   }
 }

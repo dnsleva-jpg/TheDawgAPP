@@ -22,12 +22,9 @@ export function AppLoader({ children }: AppLoaderProps) {
 
   const loadFonts = async () => {
     try {
-      console.log('🔤 Loading custom fonts...');
       await Font.loadAsync(FONT_FILES);
-      console.log('✅ Fonts loaded successfully!');
       setFontsLoaded(true);
     } catch (err) {
-      console.error('❌ Error loading fonts:', err);
       setError('Failed to load fonts. Using system fonts as fallback.');
       // Continue anyway with system fonts as fallback
       setFontsLoaded(true);
@@ -44,9 +41,7 @@ export function AppLoader({ children }: AppLoaderProps) {
     );
   }
 
-  if (error) {
-    console.warn('⚠️', error);
-  }
+  
 
   return <>{children}</>;
 }

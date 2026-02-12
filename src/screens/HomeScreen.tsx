@@ -44,7 +44,7 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
       const calculatedStats = calculateStats(sessions);
       setStats(calculatedStats);
     } catch (error) {
-      console.error('Error loading stats:', error);
+      // Stats failed to load — defaults remain
     }
   };
 
@@ -53,7 +53,7 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
       const data = await getStreakData();
       setStreakData(data);
     } catch (error) {
-      console.error('Error loading streak:', error);
+      // Streak failed to load — defaults remain
     }
   };
 
@@ -66,7 +66,7 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
           {/* Gradient Title */}
           <MaskedView
             maskElement={
-              <Text style={styles.title}>THE RAW DAWG APP</Text>
+              <Text style={styles.title} accessibilityRole="header">THE RAW DAWG APP</Text>
             }
           >
             <LinearGradient
@@ -78,15 +78,15 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
             </LinearGradient>
           </MaskedView>
           
-          <Text style={styles.subtitle}>
+          <Text style={styles.subtitle} accessibilityRole="header">
             The art of doing absolutely nothing
           </Text>
         </View>
 
         {/* Streak Display */}
         {streakData.currentStreak > 0 && (
-          <View style={styles.streakCard}>
-            <Text style={styles.streakEmoji}>
+          <View style={styles.streakCard} accessibilityRole="header">
+            <Text style={styles.streakEmoji} accessibilityLabel="">
               {getStreakMessage(streakData).emoji}
             </Text>
             <Text style={styles.streakText}>
@@ -145,6 +145,8 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
             style={styles.startButton}
             onPress={() => onStartSession(selectedDuration)}
             activeOpacity={0.8}
+            accessibilityLabel="Start session"
+            accessibilityRole="button"
           >
             <Text style={styles.startButtonText}>START SESSION</Text>
           </TouchableOpacity>

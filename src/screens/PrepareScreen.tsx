@@ -9,6 +9,7 @@ import {
   StyleSheet,
   SafeAreaView,
   Alert,
+  Linking,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Camera, useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
@@ -41,14 +42,16 @@ export function PrepareScreen({
   useEffect(() => {
     (async () => {
       setIsRequestingPermission(true);
+      try {
+        // Request camera permission via Vision Camera
+        await requestCameraPermission();
 
-      // Request camera permission via Vision Camera
-      const cameraResult = await requestCameraPermission();
-
-      // Request media library permission (still needed for SelfieScreen photo saving)
-      const mediaResult = await MediaLibrary.requestPermissionsAsync();
-
-      setMediaLibraryGranted(mediaResult.status === 'granted');
+        // Request media library permission (still needed for SelfieScreen photo saving)
+        const mediaResult = await MediaLibrary.requestPermissionsAsync();
+        setMediaLibraryGranted(mediaResult.status === 'granted');
+      } catch (error) {
+        // Permission request failed -- will show denial screen
+      }
       setIsRequestingPermission(false);
     })();
   }, []);
@@ -60,7 +63,6 @@ export function PrepareScreen({
 
     if (countdown === 0) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      console.log('[DEBUG-E] PrepareScreen calling onReady - incognito:', incognitoMode, 'durationMin:', durationMinutes);
       onReady(incognitoMode);
       return;
     }
@@ -126,18 +128,28 @@ export function PrepareScreen({
         <StatusBar style="light" />
         <View style={styles.content}>
           <View style={styles.permissionContainer}>
-            <Text style={styles.permissionTitle}>❌ Permissions Denied</Text>
+            <Text style={styles.permissionTitle}>Permissions Required</Text>
             <Text style={styles.permissionText}>
-              To use The Raw Dawg App, please enable Camera and Photos access in:
+              Raw Dawg needs Camera and Photos access to verify your sessions and save your results.
             </Text>
             <Text style={styles.permissionText}>
-              Settings → Privacy & Security → The Raw Dawg App
+              Please enable them in Settings.
             </Text>
             <TouchableOpacity
               style={styles.readyButton}
-              onPress={onCancel}
+              onPress={() => Linking.openSettings()}
+              accessibilityLabel="Open device settings"
+              accessibilityRole="button"
             >
-              <Text style={styles.readyButtonText}>GO BACK</Text>
+              <Text style={styles.readyButtonText}>OPEN SETTINGS</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={onCancel}
+              accessibilityLabel="Go back to home screen"
+              accessibilityRole="button"
+            >
+              <Text style={styles.backButtonText}>Go Back</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -203,6 +215,8 @@ export function PrepareScreen({
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
           }}
           activeOpacity={0.7}
+          accessibilityLabel={incognitoMode ? 'Incognito mode, on' : 'Incognito mode, off'}
+          accessibilityRole="button"
         >
           <View style={styles.incognitoContent}>
             <Text style={styles.incognitoIcon}>🕶️</Text>
@@ -224,6 +238,8 @@ export function PrepareScreen({
             style={styles.readyButton}
             onPress={handleReady}
             activeOpacity={0.8}
+            accessibilityLabel="I'm ready"
+            accessibilityRole="button"
           >
             <Text style={styles.readyButtonText}>I'M READY</Text>
           </TouchableOpacity>
@@ -232,6 +248,8 @@ export function PrepareScreen({
             style={styles.backButton}
             onPress={onCancel}
             activeOpacity={0.8}
+            accessibilityLabel="Go back to home screen"
+            accessibilityRole="button"
           >
             <Text style={styles.backButtonText}>Go Back</Text>
           </TouchableOpacity>

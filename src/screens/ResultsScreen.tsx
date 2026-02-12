@@ -36,13 +36,6 @@ export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0
     ? completedSeconds 
     : 0;
   
-  // Debug logging
-  console.log('🏆 ResultsScreen received:');
-  console.log('  completedSeconds (raw):', completedSeconds);
-  console.log('  safeCompletedSeconds:', safeCompletedSeconds);
-  console.log('  videoUri:', videoUri);
-  console.log('  formatted time:', formatTimeDisplay(safeCompletedSeconds));
-  
   // Face tracking stats
   const hasStats = stillnessPercent > 0 || blinksCount > 0;
   
@@ -86,7 +79,7 @@ export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0
       const calculatedStats = calculateStats(sessions);
       setStats(calculatedStats);
     } catch (error) {
-      console.error('Error loading stats:', error);
+      // Stats failed to load — defaults remain
     }
   };
 
@@ -135,15 +128,12 @@ export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0
     
     try {
       await Clipboard.setStringAsync(caption);
-      console.log('📋 ✅ Caption copied:', caption);
-      
       setCaptionCopied(true);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       
       // Reset after 3 seconds
       setTimeout(() => setCaptionCopied(false), 3000);
     } catch (error) {
-      console.error('📋 ❌ Copy failed:', error);
       Alert.alert('Copy Failed', 'Could not copy caption to clipboard');
     }
   };
@@ -151,16 +141,14 @@ export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0
   const handleShareToPlatform = async (platform: 'tiktok' | 'instagram') => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     
-    console.log(`📤 ========== SHARE TO ${platform.toUpperCase()} ==========`);
+    if (__DEV__) console.log(`📤 Share to ${platform}`);
     
     try {
       setIsProcessingVideo(true);
       
       // Save video to camera roll if we have one
       if (videoUri) {
-        console.log('📤 Saving video to camera roll...');
         await saveVideoToPhotos(videoUri);
-        console.log('📤 ✅ Video saved!');
       }
       
       setIsProcessingVideo(false);
@@ -182,12 +170,10 @@ export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0
               // Copy caption RIGHT before opening
               const caption = getCaption();
               await Clipboard.setStringAsync(caption);
-              console.log('📋 ✅ Caption re-copied before opening app');
+              
               
               // Small delay to ensure clipboard sync
               setTimeout(async () => {
-                console.log(`📤 Opening ${platform}...`);
-                
                 if (platform === 'tiktok') {
                   // Try multiple TikTok URL schemes
                   const tiktokUrls = [
@@ -199,20 +185,18 @@ export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0
                   let opened = false;
                   for (const url of tiktokUrls) {
                     try {
-                      console.log(`📤 Trying TikTok URL: ${url}`);
                       await Linking.openURL(url);
                       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                       setShowCaptionPreview(false);
                       opened = true;
                       break;
                     } catch (error) {
-                      console.log(`📤 Failed with ${url}, trying next...`);
                       continue;
                     }
                   }
                   
                   if (!opened) {
-                    console.log('📤 ❌ All TikTok URLs failed');
+                    Alert.alert('TikTok Not Found', 'Could not open TikTok. Make sure it is installed.');
                   }
                 } else {
                   // Instagram
@@ -221,8 +205,11 @@ export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0
                     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                     setShowCaptionPreview(false);
                   } catch (error) {
-                    console.log('📤 Instagram app couldn\'t be opened, using fallback...');
-                    await Linking.openURL('https://www.instagram.com/');
+                    try {
+                      await Linking.openURL('https://www.instagram.com/');
+                    } catch (_) {
+                      Alert.alert('Instagram Not Found', 'Could not open Instagram.');
+                    }
                     setShowCaptionPreview(false);
                   }
                 }
@@ -232,14 +219,11 @@ export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0
         ]
       );
       
-      console.log('📤 ✅ Share flow completed');
-      
     } catch (error: any) {
       setIsProcessingVideo(false);
-      console.log('📤 ❌ Error:', error);
       Alert.alert(
         'Error', 
-        `Could not save video. Error: ${error.message}`
+        `Could not save video. Error: ${error?.message ?? 'Unknown error'}`
       );
     }
   };
@@ -253,19 +237,14 @@ export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0
     }
     
     try {
-      console.log('📹 Saving video...');
-      
       // Save video to camera roll first
       await saveVideoToPhotos(videoUri);
-      
-      console.log('📹 ✅ Video saved! Opening location picker...');
       
       // Now show location picker, same as Share button
       setShowLocationPicker(true);
       
     } catch (error: any) {
-      console.error('📹 ❌ Save failed:', error);
-      Alert.alert('Error', `Failed to save: ${error.message}`);
+      Alert.alert('Error', `Failed to save: ${error?.message ?? 'Unknown error'}`);
     }
   };
 
@@ -366,6 +345,8 @@ export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0
             style={styles.shareButton}
             onPress={handleShare}
             activeOpacity={0.8}
+            accessibilityLabel="Share"
+            accessibilityRole="button"
           >
             <Text style={styles.shareButtonText}>SHARE</Text>
           </TouchableOpacity>
@@ -374,6 +355,8 @@ export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0
             style={styles.goAgainButton}
             onPress={handleGoAgain}
             activeOpacity={0.8}
+            accessibilityLabel="Go again"
+            accessibilityRole="button"
           >
             <Text style={styles.goAgainButtonText}>GO AGAIN</Text>
           </TouchableOpacity>
@@ -382,6 +365,8 @@ export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0
             style={styles.doneButton}
             onPress={onGoHome}
             activeOpacity={0.8}
+            accessibilityLabel="Done"
+            accessibilityRole="button"
           >
             <Text style={styles.doneButtonText}>Done</Text>
           </TouchableOpacity>
@@ -415,6 +400,8 @@ export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0
                     style={styles.customSubmitButton}
                     onPress={handleCustomLocationSubmit}
                     activeOpacity={0.8}
+                    accessibilityLabel="Done"
+                    accessibilityRole="button"
                   >
                     <Text style={styles.customSubmitButtonText}>Done</Text>
                   </TouchableOpacity>
@@ -425,6 +412,8 @@ export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0
                       setCustomLocation('');
                     }}
                     activeOpacity={0.8}
+                    accessibilityLabel="Back"
+                    accessibilityRole="button"
                   >
                     <Text style={styles.customCancelButtonText}>Back</Text>
                   </TouchableOpacity>
@@ -437,6 +426,8 @@ export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0
                       style={styles.locationOption}
                       onPress={() => handleLocationSelect(location)}
                       activeOpacity={0.8}
+                      accessibilityLabel={location.text}
+                      accessibilityRole="button"
                     >
                       <Text style={styles.locationEmoji}>{location.emoji}</Text>
                       <Text style={styles.locationText}>{location.text}</Text>
@@ -451,6 +442,8 @@ export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0
                 style={styles.modalCloseButton}
                 onPress={() => setShowLocationPicker(false)}
                 activeOpacity={0.8}
+                accessibilityLabel="Cancel"
+                accessibilityRole="button"
               >
                 <Text style={styles.modalCloseButtonText}>Cancel</Text>
               </TouchableOpacity>
@@ -497,6 +490,8 @@ export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0
                   ]}
                   onPress={handleCopyCaption}
                   activeOpacity={0.8}
+                  accessibilityLabel={captionCopied ? 'Caption copied' : 'Copy caption'}
+                  accessibilityRole="button"
                 >
                   <Text style={styles.copyButtonText}>
                     {captionCopied ? '✅ Copied!' : '📋 Copy Caption'}
@@ -512,6 +507,8 @@ export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0
                     style={[styles.platformButton, styles.tiktokButton]}
                     onPress={() => handleShareToPlatform('tiktok')}
                     activeOpacity={0.8}
+                    accessibilityLabel="Open TikTok"
+                    accessibilityRole="button"
                   >
                     <Text style={styles.platformButtonText}>📱 Open TikTok</Text>
                   </TouchableOpacity>
@@ -520,6 +517,8 @@ export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0
                     style={[styles.platformButton, styles.instagramButton]}
                     onPress={() => handleShareToPlatform('instagram')}
                     activeOpacity={0.8}
+                    accessibilityLabel="Open Instagram"
+                    accessibilityRole="button"
                   >
                     <Text style={styles.platformButtonText}>📸 Open Instagram</Text>
                   </TouchableOpacity>
@@ -532,6 +531,8 @@ export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0
                     setCaptionCopied(false);
                   }}
                   activeOpacity={0.8}
+                  accessibilityLabel="Cancel"
+                  accessibilityRole="button"
                 >
                   <Text style={styles.modalCloseButtonText}>Cancel</Text>
                 </TouchableOpacity>

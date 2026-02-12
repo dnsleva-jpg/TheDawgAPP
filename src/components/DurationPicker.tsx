@@ -12,7 +12,7 @@ interface DurationPickerProps {
 export function DurationPicker({ selectedDuration, onSelectDuration }: DurationPickerProps) {
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>Select Duration</Text>
+      <Text style={styles.label} accessibilityRole="header">Select Duration</Text>
       <View style={styles.optionsContainer}>
         {DURATION_OPTIONS.map((option: DurationOption) => {
           const isSelected = option.seconds === selectedDuration;
@@ -26,6 +26,8 @@ export function DurationPicker({ selectedDuration, onSelectDuration }: DurationP
                 isSelected && (isRogue ? styles.rogueButtonSelected : styles.optionButtonSelected),
               ]}
               onPress={() => onSelectDuration(option.seconds)}
+              accessibilityLabel={`Select ${option.label}${isSelected ? ', selected' : ''}`}
+              accessibilityRole="button"
             >
               <Text
                 style={[

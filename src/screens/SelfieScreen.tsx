@@ -62,7 +62,7 @@ export function SelfieScreen({
       setIsProcessing(true);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-      console.log('📸 Step 1: Taking selfie from camera...');
+      
 
       const photo = await cameraRef.current.takePictureAsync({
         quality: 0.9,
@@ -72,8 +72,6 @@ export function SelfieScreen({
         throw new Error('No photo URI returned');
       }
 
-      console.log('📸 ✅ Photo captured, switching to preview mode:', photo.uri);
-
       // Switch from camera to preview mode
       // This replaces the native camera with a regular <Image>
       setCapturedPhotoUri(photo.uri);
@@ -82,7 +80,7 @@ export function SelfieScreen({
       // The "SAVE WITH STATS" button now appears (see render below)
     } catch (error: any) {
       setIsProcessing(false);
-      Alert.alert('Photo Failed', `Failed to capture photo: ${error.message}`);
+      Alert.alert('Photo Failed', `Failed to capture photo: ${error?.message ?? 'Unknown error'}`);
     }
   };
 
@@ -94,20 +92,23 @@ export function SelfieScreen({
       setIsProcessing(true);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-      console.log('📸 Step 2: Capturing photo + stats with view-shot...');
+      
 
       // Small delay to make sure the Image is fully rendered
       await new Promise((resolve) => setTimeout(resolve, 300));
 
       // react-native-view-shot captures EVERYTHING inside the <ViewShot> wrapper
       // Since the photo is now a regular <Image> (not native camera), it works!
-      const uri = await viewShotRef.current.capture!();
+      if (!viewShotRef.current?.capture) {
+        throw new Error('ViewShot ref not ready');
+      }
+      const uri = await viewShotRef.current.capture();
 
       if (!uri) {
         throw new Error('ViewShot capture returned no URI');
       }
 
-      console.log('📸 ✅ Stats overlay captured:', uri);
+      
 
       // Request media library permissions
       const { status } = await MediaLibrary.requestPermissionsAsync();
@@ -117,7 +118,7 @@ export function SelfieScreen({
 
       // Save the combined image (photo + stats) to camera roll
       await MediaLibrary.createAssetAsync(uri);
-      console.log('📸 ✅ Photo WITH stats saved to camera roll!');
+      
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
@@ -127,9 +128,9 @@ export function SelfieScreen({
         [{ text: 'Done!', onPress: onComplete }]
       );
     } catch (error: any) {
-      console.error('📸 ❌ Save with stats failed:', error);
+      
       setIsProcessing(false);
-      Alert.alert('Save Failed', `Failed to save photo: ${error.message}`);
+      Alert.alert('Save Failed', `Failed to save photo: ${error?.message ?? 'Unknown error'}`);
     }
   }, [isProcessing, onComplete]);
 
@@ -226,6 +227,8 @@ export function SelfieScreen({
               onPress={handleSaveWithStats}
               disabled={isProcessing}
               activeOpacity={0.8}
+              accessibilityLabel="Save photo with stats"
+              accessibilityRole="button"
             >
               <Text style={styles.takePhotoButtonText}>
                 {isProcessing ? 'SAVING...' : '✅ SAVE WITH STATS'}

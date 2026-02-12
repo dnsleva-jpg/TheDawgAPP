@@ -56,11 +56,12 @@ function AppContent() {
       blinksCount: blinks || 0,
     };
     
-    await saveSession(session);
-    
-    // Update streak
-    const updatedStreak = await updateStreakAfterSession();
-    console.log('🔥 Streak updated:', updatedStreak);
+    try {
+      await saveSession(session);
+      await updateStreakAfterSession();
+    } catch (_) {
+      // Storage failed — continue to selfie screen regardless
+    }
     
     // Go to Selfie screen
     setCurrentScreen('Selfie');
@@ -100,17 +101,14 @@ function AppContent() {
         />
       )}
       
-      {currentScreen === 'Timer' && (() => {
-        console.log('[DEBUG-C] Rendering TimerScreen - sessionDuration:', sessionDuration, 'incognito:', incognitoMode);
-        return (
-          <TimerScreen
-            durationSeconds={sessionDuration}
-            onComplete={handleSessionComplete}
-            onCancel={handleCancelSession}
-            incognitoMode={incognitoMode}
-          />
-        );
-      })()}
+      {currentScreen === 'Timer' && (
+        <TimerScreen
+          durationSeconds={sessionDuration}
+          onComplete={handleSessionComplete}
+          onCancel={handleCancelSession}
+          incognitoMode={incognitoMode}
+        />
+      )}
       
       {currentScreen === 'Selfie' && (
         <SelfieScreen

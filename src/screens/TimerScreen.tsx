@@ -76,8 +76,12 @@ export function TimerScreen({
 
   useEffect(() => {
     (async () => {
-      if (hasPermission) {
-        await MediaLibrary.requestPermissionsAsync();
+      try {
+        if (hasPermission) {
+          await MediaLibrary.requestPermissionsAsync();
+        }
+      } catch (_) {
+        // Permission request failed — video saving may not work
       }
     })();
   }, [hasPermission]);

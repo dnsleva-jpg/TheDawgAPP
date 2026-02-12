@@ -15,10 +15,14 @@ export async function getStreakData(): Promise<StreakData> {
   try {
     const data = await AsyncStorage.getItem(STREAK_STORAGE_KEY);
     if (data) {
-      return JSON.parse(data);
+      const parsed = JSON.parse(data);
+      // Validate structure
+      if (parsed && typeof parsed.currentStreak === 'number') {
+        return parsed;
+      }
     }
   } catch (error) {
-    console.error('Error loading streak data:', error);
+    // Corrupted data — return defaults
   }
   
   // Default values
@@ -36,7 +40,7 @@ async function saveStreakData(data: StreakData): Promise<void> {
   try {
     await AsyncStorage.setItem(STREAK_STORAGE_KEY, JSON.stringify(data));
   } catch (error) {
-    console.error('Error saving streak data:', error);
+    // Silently fail — streak not saved but app continues
   }
 }
 
@@ -76,7 +80,6 @@ export async function updateStreakAfterSession(): Promise<StreakData> {
   
   // If session already completed today, don't change streak
   if (streakData.lastSessionDate === today) {
-    console.log('🔥 Session already completed today, streak unchanged');
     return streakData;
   }
   
@@ -85,15 +88,9 @@ export async function updateStreakAfterSession(): Promise<StreakData> {
   if (streakData.lastSessionDate === yesterday) {
     // Last session was yesterday → increment streak
     newStreak = streakData.currentStreak + 1;
-    console.log('🔥 Streak continued! Day', newStreak);
   } else {
     // Last session was 2+ days ago or never → reset to 1
     newStreak = 1;
-    if (streakData.currentStreak > 0) {
-      console.log('💔 Streak broken! Starting fresh at day 1');
-    } else {
-      console.log('🔥 First streak started!');
-    }
   }
   
   const updatedData: StreakData = {
