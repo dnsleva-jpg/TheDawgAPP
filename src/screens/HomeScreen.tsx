@@ -143,12 +143,7 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
         <View style={styles.footer}>
           <TouchableOpacity
             style={styles.startButton}
-            onPress={() => {
-              // #region agent log
-              console.log('[DEBUG] HomeScreen: Start button pressed, selectedDuration:', selectedDuration);
-              // #endregion
-              onStartSession(selectedDuration);
-            }}
+            onPress={() => onStartSession(selectedDuration)}
             activeOpacity={0.8}
           >
             <Text style={styles.startButtonText}>START SESSION</Text>

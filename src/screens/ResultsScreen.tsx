@@ -25,10 +25,12 @@ import { saveVideoToPhotos } from '../utils/videoProcessor';
 interface ResultsScreenProps {
   completedSeconds: number;
   videoUri?: string;
+  stillnessPercent?: number;
+  blinksCount?: number;
   onGoHome: () => void;
 }
 
-export function ResultsScreen({ completedSeconds, videoUri, onGoHome }: ResultsScreenProps) {
+export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0, blinksCount = 0, onGoHome }: ResultsScreenProps) {
   // Safety check: ensure completedSeconds is valid
   const safeCompletedSeconds = (completedSeconds >= 0 && !isNaN(completedSeconds)) 
     ? completedSeconds 
@@ -41,8 +43,8 @@ export function ResultsScreen({ completedSeconds, videoUri, onGoHome }: ResultsS
   console.log('  videoUri:', videoUri);
   console.log('  formatted time:', formatTimeDisplay(safeCompletedSeconds));
   
-  // Generate random percentage (80-99%)
-  const [randomPercentage] = useState(Math.floor(Math.random() * 20) + 80);
+  // Face tracking stats
+  const hasStats = stillnessPercent > 0 || blinksCount > 0;
   
   // Location picker state
   const [showLocationPicker, setShowLocationPicker] = useState(false);
@@ -292,12 +294,22 @@ export function ResultsScreen({ completedSeconds, videoUri, onGoHome }: ResultsS
           <Text style={styles.timeLabel}>completed</Text>
         </View>
 
-        {/* Fun Stat */}
-        <View style={styles.statContainer}>
-          <Text style={styles.statText}>
-            You out-relaxed {randomPercentage}% of humans
-          </Text>
-        </View>
+        {/* Face Tracking Stats */}
+        {hasStats && (
+          <View style={styles.faceStatsContainer}>
+            <View style={styles.faceStatsRow}>
+              <View style={styles.faceStatItem}>
+                <Text style={styles.faceStatValue}>{stillnessPercent}%</Text>
+                <Text style={styles.faceStatLabel}>stillness</Text>
+              </View>
+              <View style={styles.faceStatDivider} />
+              <View style={styles.faceStatItem}>
+                <Text style={styles.faceStatValue}>{blinksCount}</Text>
+                <Text style={styles.faceStatLabel}>blinks</Text>
+              </View>
+            </View>
+          </View>
+        )}
 
         {/* Stats Grid */}
         {stats.totalSessions > 0 && (
@@ -583,15 +595,40 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 2,
   },
-  statContainer: {
+  faceStatsContainer: {
     alignItems: 'center',
-    paddingVertical: 20,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    backgroundColor: DS_COLORS.bgSurface,
+    borderRadius: RADIUS.card,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.04)',
   },
-  statText: {
-    fontSize: 18,
-    fontFamily: FONTS.monoBold,
-    color: DS_COLORS.textSecondary,
-    textAlign: 'center',
+  faceStatsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 24,
+  },
+  faceStatItem: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  faceStatValue: {
+    fontSize: 32,
+    fontFamily: FONTS.display,
+    color: DS_COLORS.coral,
+  },
+  faceStatLabel: {
+    fontSize: 12,
+    fontFamily: FONTS.monoMedium,
+    color: DS_COLORS.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  faceStatDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   statsSection: {
     gap: 16,

@@ -52,6 +52,8 @@ function AppContent() {
       timestamp: Date.now(),
       isRogueMode: sessionDuration === -1,
       completed: true,
+      stillnessPercent: stillness || 0,
+      blinksCount: blinks || 0,
     };
     
     await saveSession(session);
@@ -123,6 +125,8 @@ function AppContent() {
         <ResultsScreen
           completedSeconds={completedSeconds}
           videoUri={videoUri}
+          stillnessPercent={stillnessPercent}
+          blinksCount={blinksCount}
           onGoHome={handleGoHome}
         />
       )}

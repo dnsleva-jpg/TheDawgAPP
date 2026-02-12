@@ -46,9 +46,10 @@ export function TimerScreen({
   const [isRecording, setIsRecording] = useState(false);
   const [isStoppingRecording, setIsStoppingRecording] = useState(false);
   const [liveStats, setLiveStats] = useState({ stillness: 0, blinks: 0 });
-  const cameraKey = useState(() => `timer-camera-${Date.now()}`)[0];
 
   const cameraRef = useRef<any>(null);
+  const isRecordingRef = useRef(false);
+  const hasCompletedRef = useRef(false);
   const recordingFinishedResolveRef = useRef<((uri: string | undefined) => void) | null>(null);
   const lastTempVideoPathRef = useRef<string | null>(null);
 
@@ -62,6 +63,12 @@ export function TimerScreen({
     trackingEnabled: false,
     minFaceSize: 0.2,
   }).current;
+
+  // Refs for values needed in callbacks to avoid stale closures
+  const timeRemainingRef = useRef(timeRemaining);
+  timeRemainingRef.current = timeRemaining;
+  const isRogueModeRef = useRef(isRogueMode);
+  isRogueModeRef.current = isRogueMode;
 
   useEffect(() => {
     if (!hasPermission) requestPermission();
@@ -104,7 +111,7 @@ export function TimerScreen({
   }, []);
 
   const startRecording = useCallback(async () => {
-    if (!cameraRef.current || isRecording) return;
+    if (!cameraRef.current || isRecordingRef.current) return;
     await cleanupPreviousTempVideo();
     try {
       cameraRef.current.startRecording({
@@ -113,6 +120,7 @@ export function TimerScreen({
         onRecordingFinished: (video: { path: string }) => {
           const uri = video.path.startsWith('file://') ? video.path : `file://${video.path}`;
           lastTempVideoPathRef.current = uri;
+          isRecordingRef.current = false;
           setIsRecording(false);
           if (recordingFinishedResolveRef.current) {
             recordingFinishedResolveRef.current(uri);
@@ -120,6 +128,7 @@ export function TimerScreen({
           }
         },
         onRecordingError: (e: any) => {
+          isRecordingRef.current = false;
           setIsRecording(false);
           if (recordingFinishedResolveRef.current) {
             recordingFinishedResolveRef.current(undefined);
@@ -127,16 +136,17 @@ export function TimerScreen({
           }
         },
       });
+      isRecordingRef.current = true;
       setIsRecording(true);
-    } catch (err) {
-      console.warn('Recording start failed:', err);
+    } catch (err: any) {
+      isRecordingRef.current = false;
       setIsRecording(false);
     }
-  }, [isRecording, cleanupPreviousTempVideo]);
+  }, [cleanupPreviousTempVideo]);
 
   useEffect(() => {
     if (hasPermission) {
-      reset(); // Clear any stale state from previous session / hot reload
+      reset();
       start();
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       setTimeout(() => startRecording(), 800);
@@ -144,48 +154,56 @@ export function TimerScreen({
   }, [hasPermission, reset]);
 
   const handleComplete = useCallback(async () => {
-    const completedTime = isRogueMode ? timeRemaining : (durationSeconds - timeRemaining);
-    const safeTime = (completedTime < 0 || isNaN(completedTime)) ? 0 : completedTime;
-    const faceResults = getResults();
+    // Prevent double-calling (critical: re-render triggers useEffect again)
+    if (hasCompletedRef.current) return;
+    hasCompletedRef.current = true;
+    setIsStoppingRecording(true);
 
+    // Read from refs for current values (avoids stale closures)
+    const tr = timeRemainingRef.current;
+    const rogue = isRogueModeRef.current;
+    let completedTime = rogue ? tr : (durationSeconds - tr);
+    if (completedTime < 0 || isNaN(completedTime)) completedTime = 0;
+
+    const faceResults = getResults();
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
     let finalVideoUri: string | undefined;
-    if (isRecording && cameraRef.current) {
+    if (isRecordingRef.current && cameraRef.current) {
       try {
-        setIsStoppingRecording(true);
         const videoPromise = new Promise<string | undefined>((r) => {
           recordingFinishedResolveRef.current = r;
         });
         await cameraRef.current.stopRecording();
         finalVideoUri = await videoPromise;
-      } catch (_) {
+      } catch (err: any) {
         finalVideoUri = undefined;
       }
-      setIsStoppingRecording(false);
-      setIsRecording(false);
     }
 
-    setTimeout(() => {
-      onComplete(safeTime, finalVideoUri, faceResults.stillnessScore, faceResults.totalBlinks);
-    }, 300);
-  }, [isRogueMode, timeRemaining, durationSeconds, isRecording, getResults, onComplete]);
+    isRecordingRef.current = false;
+    setIsRecording(false);
+    setIsStoppingRecording(false);
+
+    onComplete(completedTime, finalVideoUri, faceResults.stillnessScore, faceResults.totalBlinks);
+  }, [durationSeconds, getResults, onComplete]);
 
   useEffect(() => {
     if (status === 'completed') {
-      handleComplete();
+      setTimeout(() => handleComplete(), 500);
     }
   }, [status, handleComplete]);
 
   const cancelRecording = useCallback(async () => {
-    if (isRecording && cameraRef.current) {
+    if (isRecordingRef.current && cameraRef.current) {
       try {
         await cameraRef.current.cancelRecording();
       } catch (_) {}
+      isRecordingRef.current = false;
       setIsRecording(false);
       recordingFinishedResolveRef.current = null;
     }
-  }, [isRecording]);
+  }, []);
 
   const handleCancel = () => {
     Alert.alert(
@@ -255,7 +273,6 @@ export function TimerScreen({
       <StatusBar style="light" />
       
       <Camera
-        key={cameraKey}
         ref={cameraRef}
         device={device}
         isActive={true}
@@ -273,14 +290,12 @@ export function TimerScreen({
           >
             <View style={styles.blackScreen} />
             
-            {/* Small recording indicator */}
             {!showControls && (
               <View style={styles.incognitoIndicator}>
                 <View style={styles.recordingDot} />
               </View>
             )}
             
-            {/* Controls appear on tap */}
             {showControls && (
               <SafeAreaView style={styles.incognitoControls}>
                 <View style={styles.incognitoHeader}>
@@ -340,14 +355,12 @@ export function TimerScreen({
                 <Text style={styles.rogueModeLabel}>∞ ROGUE MODE</Text>
               )}
               
-              {/* Main Timer Display */}
               <View style={styles.timerContainer}>
                 <Text style={styles.timerText}>
                   {formatTimeDisplay(timeRemaining)}
                 </Text>
               </View>
               
-              {/* Progress bar for timed modes */}
               {!isRogueMode && (
                 <View style={styles.progressBarContainer}>
                   <View
@@ -360,7 +373,7 @@ export function TimerScreen({
               )}
             </View>
 
-            {/* Stats Bar - Above bottom controls */}
+            {/* Stats Bar */}
             <View style={styles.statsBar}>
               <Text style={styles.sessionText}>
                 I Raw Dawg'd for {formatTimeDisplay(isRogueMode ? timeRemaining : durationSeconds - timeRemaining)}
@@ -409,10 +422,9 @@ export function TimerScreen({
 }
 
 const styles = StyleSheet.create({
-  // Brand Kit - Timer Screen
   container: {
     flex: 1,
-    backgroundColor: DS_COLORS.bgDeep, // Brand kit background
+    backgroundColor: DS_COLORS.bgDeep,
   },
   loadingContainer: {
     flex: 1,
@@ -484,7 +496,7 @@ const styles = StyleSheet.create({
   },
   timerText: {
     fontSize: 80,
-    fontFamily: FONTS.display, // Bebas Neue for countdown
+    fontFamily: FONTS.display,
     color: DS_COLORS.textPrimary,
     letterSpacing: 4,
     textShadowColor: 'rgba(0, 0, 0, 0.8)',
@@ -590,32 +602,29 @@ const styles = StyleSheet.create({
     color: DS_COLORS.textPrimary,
     letterSpacing: 2,
   },
-  // Brand Kit - Finish Button
   finishButton: {
     paddingHorizontal: 48,
     paddingVertical: 16,
     borderRadius: 14,
-    backgroundColor: DS_COLORS.amber, // Brand kit amber for finish
+    backgroundColor: DS_COLORS.amber,
     borderWidth: 0,
   },
   finishButtonText: {
     fontSize: 16,
     fontFamily: FONTS.heading,
-    color: DS_COLORS.bgDeep, // Dark text on amber background
+    color: DS_COLORS.bgDeep,
     letterSpacing: 1,
   },
-  // Brand Kit - Give Up Button (subtle, afterthought)
   giveUpButton: {
     paddingHorizontal: 32,
     paddingVertical: 12,
   },
   giveUpButtonText: {
-    fontSize: 13, // 0.8rem - small per brand kit
+    fontSize: 13,
     fontFamily: FONTS.body,
-    color: DS_COLORS.textDisabled, // Very subtle per brand kit
+    color: DS_COLORS.textDisabled,
     letterSpacing: 0,
   },
-  // Incognito Mode Styles
   incognitoContainer: {
     flex: 1,
   },

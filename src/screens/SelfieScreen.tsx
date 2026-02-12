@@ -40,6 +40,14 @@ export function SelfieScreen({
   const cameraRef = useRef<CameraView>(null);
   const viewShotRef = useRef<ViewShot>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [cameraReady, setCameraReady] = useState(false);
+  const [cameraDelayDone, setCameraDelayDone] = useState(false);
+
+  // Delay camera mount to let TimerScreen's camera fully release
+  React.useEffect(() => {
+    const timer = setTimeout(() => setCameraDelayDone(true), 500);
+    return () => clearTimeout(timer);
+  }, []);
 
   // ─── THIS IS THE KEY NEW PIECE ───
   // When null = show live camera
@@ -48,7 +56,7 @@ export function SelfieScreen({
 
   // ─── STEP 1: Take photo from camera (saves raw photo URI) ───
   const handleTakePhoto = async () => {
-    if (!cameraRef.current || isProcessing) return;
+    if (!cameraRef.current || isProcessing || !cameraReady) return;
 
     try {
       setIsProcessing(true);
@@ -73,7 +81,6 @@ export function SelfieScreen({
 
       // The "SAVE WITH STATS" button now appears (see render below)
     } catch (error: any) {
-      console.error('📸 ❌ Photo capture failed:', error);
       setIsProcessing(false);
       Alert.alert('Photo Failed', `Failed to capture photo: ${error.message}`);
     }
@@ -256,37 +263,48 @@ export function SelfieScreen({
     <View style={styles.container}>
       <StatusBar style="light" />
 
-      <CameraView ref={cameraRef} style={styles.camera} facing="front">
-        <SafeAreaView style={styles.overlay}>
-          {/* Stats Overlay (visible on screen but won't be in photo yet) */}
-          <View style={styles.centerSection}>
-            <StatsOverlay />
-          </View>
+      {cameraDelayDone ? (
+        <CameraView
+          ref={cameraRef}
+          style={styles.camera}
+          facing="front"
+          onCameraReady={() => setCameraReady(true)}
+        >
+          <SafeAreaView style={styles.overlay}>
+            {/* Stats Overlay (visible on screen but won't be in photo yet) */}
+            <View style={styles.centerSection}>
+              <StatsOverlay />
+            </View>
 
-          {/* Action Buttons */}
-          <View style={styles.bottomSection}>
-            <TouchableOpacity
-              style={[styles.button, styles.takePhotoButton]}
-              onPress={handleTakePhoto}
-              disabled={isProcessing}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.takePhotoButtonText}>
-                {isProcessing ? 'CAPTURING...' : '📸 TAKE PHOTO'}
-              </Text>
-            </TouchableOpacity>
+            {/* Action Buttons */}
+            <View style={styles.bottomSection}>
+              <TouchableOpacity
+                style={[styles.button, styles.takePhotoButton, !cameraReady && styles.buttonDisabled]}
+                onPress={handleTakePhoto}
+                disabled={isProcessing || !cameraReady}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.takePhotoButtonText}>
+                  {!cameraReady ? 'LOADING CAMERA...' : isProcessing ? 'CAPTURING...' : '📸 TAKE PHOTO'}
+                </Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.button, styles.skipButton]}
-              onPress={handleSkip}
-              disabled={isProcessing}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.skipButtonText}>SKIP</Text>
-            </TouchableOpacity>
-          </View>
-        </SafeAreaView>
-      </CameraView>
+              <TouchableOpacity
+                style={[styles.button, styles.skipButton]}
+                onPress={handleSkip}
+                disabled={isProcessing}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.skipButtonText}>SKIP</Text>
+              </TouchableOpacity>
+            </View>
+          </SafeAreaView>
+        </CameraView>
+      ) : (
+        <View style={[styles.camera, { justifyContent: 'center', alignItems: 'center' }]}>
+          <Text style={styles.skipButtonText}>Preparing camera...</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -473,6 +491,9 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.heading,
     color: DS_COLORS.textPrimary,
     letterSpacing: 0,
+  },
+  buttonDisabled: {
+    opacity: 0.5,
   },
   
   // Secondary Button (Outline)
