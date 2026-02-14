@@ -7,9 +7,10 @@ import { COLORS as DS_COLORS, FONTS } from '../constants/designSystem';
 interface DurationPickerProps {
   selectedDuration: number;
   onSelectDuration: (seconds: number) => void;
+  onStartSession?: (seconds: number) => void;
 }
 
-export function DurationPicker({ selectedDuration, onSelectDuration }: DurationPickerProps) {
+export function DurationPicker({ selectedDuration, onSelectDuration, onStartSession }: DurationPickerProps) {
   return (
     <View style={styles.container}>
       <Text style={styles.label} accessibilityRole="header">Select Duration</Text>
@@ -25,7 +26,13 @@ export function DurationPicker({ selectedDuration, onSelectDuration }: DurationP
                 isRogue && styles.rogueButton,
                 isSelected && (isRogue ? styles.rogueButtonSelected : styles.optionButtonSelected),
               ]}
-              onPress={() => onSelectDuration(option.seconds)}
+              onPress={() => {
+                if (isSelected && onStartSession) {
+                  onStartSession(option.seconds);
+                } else {
+                  onSelectDuration(option.seconds);
+                }
+              }}
               accessibilityLabel={`Select ${option.label}${isSelected ? ', selected' : ''}`}
               accessibilityRole="button"
             >

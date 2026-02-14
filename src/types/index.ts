@@ -37,4 +37,4 @@ export interface UserStats {
   totalScoredSessions?: number;    // count of sessions with scoring data
 }
 
-export type Screen = 'Home' | 'Prepare' | 'Timer' | 'Selfie' | 'Results';
+export type Screen = 'Home' | 'Prepare' | 'Timer' | 'Selfie' | 'Results' | 'Stats' | 'Rewire' | 'Settings';

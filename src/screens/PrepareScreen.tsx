@@ -10,6 +10,7 @@ import {
   SafeAreaView,
   Alert,
   Linking,
+  ScrollView,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Camera, useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
@@ -18,14 +19,18 @@ import * as Haptics from 'expo-haptics';
 import { COLORS } from '../constants/colors';
 import { COLORS as DS_COLORS, FONTS, RADIUS, SHADOWS } from '../constants/designSystem';
 
+export type ProtectionLevel = 'easy' | 'strict' | 'ruthless';
+
 interface PrepareScreenProps {
   durationMinutes: number;
-  onReady: (incognitoMode?: boolean) => void;
+  isRogueMode?: boolean;
+  onReady: (incognitoMode?: boolean, protectionLevel?: ProtectionLevel) => void;
   onCancel: () => void;
 }
 
 export function PrepareScreen({ 
   durationMinutes, 
+  isRogueMode = false,
   onReady,
   onCancel,
 }: PrepareScreenProps) {
@@ -33,6 +38,7 @@ export function PrepareScreen({
   const [mediaLibraryGranted, setMediaLibraryGranted] = useState<boolean | null>(null);
   const [isRequestingPermission, setIsRequestingPermission] = useState<boolean>(true);
   const [incognitoMode, setIncognitoMode] = useState<boolean>(false);
+  const [protectionLevel, setProtectionLevel] = useState<ProtectionLevel>('easy');
 
   // Vision Camera hooks
   const device = useCameraDevice('front');
@@ -63,7 +69,7 @@ export function PrepareScreen({
 
     if (countdown === 0) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      onReady(incognitoMode);
+      onReady(incognitoMode, protectionLevel);
       return;
     }
 
@@ -73,7 +79,7 @@ export function PrepareScreen({
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [countdown, onReady, incognitoMode]);
+  }, [countdown, onReady, incognitoMode, protectionLevel]);
 
   const handleReady = () => {
     if (incognitoMode) {
@@ -186,25 +192,104 @@ export function PrepareScreen({
     );
   }
 
+  const handleSelectProtection = (level: ProtectionLevel) => {
+    if (level === 'ruthless') {
+      if (isRogueMode) {
+        Alert.alert('Not Available', 'Ruthless Mode cannot be used with Rogue Mode (infinite timer).');
+        return;
+      }
+      Alert.alert(
+        'Raw Dawg Pro',
+        'Ruthless Mode requires Raw Dawg Pro — $4.99/month.\n\nComing soon!',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setProtectionLevel(level);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
       
-      <View style={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>Prepare Your Space</Text>
-          <Text style={styles.duration}>{durationMinutes} minute session</Text>
+          <Text style={styles.duration}>
+            {isRogueMode ? 'Rogue Mode' : `${durationMinutes} minute session`}
+          </Text>
         </View>
 
         {/* Instructions */}
         <View style={styles.instructionsContainer}>
           <InstructionItem text="Find a quiet spot with no distractions" />
-          <InstructionItem text="Turn off TV, music, and notifications" />
           <InstructionItem text="Prop your phone up so it can see you" />
           <InstructionItem text="Sit or stand comfortably - you'll stay still" />
           <InstructionItem text="No phone, no scrolling, no fidgeting" />
-          <InstructionItem text="Just exist for the next few minutes" />
+        </View>
+
+        {/* Protection Level Selector */}
+        <View style={styles.protectionSection}>
+          <Text style={styles.protectionTitle}>Protection Level</Text>
+
+          {/* Easy */}
+          <TouchableOpacity
+            style={[
+              styles.protectionCard,
+              protectionLevel === 'easy' && styles.protectionCardSelected,
+            ]}
+            onPress={() => handleSelectProtection('easy')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.protectionIcon}>🟢</Text>
+            <View style={styles.protectionTextContainer}>
+              <Text style={styles.protectionName}>Easy Mode</Text>
+              <Text style={styles.protectionSubtitle}>Quit anytime</Text>
+              <Text style={styles.protectionDesc}>No restrictions. Tap Give Up whenever you want.</Text>
+            </View>
+          </TouchableOpacity>
+
+          {/* Strict */}
+          <TouchableOpacity
+            style={[
+              styles.protectionCard,
+              protectionLevel === 'strict' && styles.protectionCardSelectedStrict,
+            ]}
+            onPress={() => handleSelectProtection('strict')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.protectionIcon}>🟡</Text>
+            <View style={styles.protectionTextContainer}>
+              <Text style={styles.protectionName}>Strict Mode</Text>
+              <Text style={styles.protectionSubtitle}>Think before you quit</Text>
+              <Text style={styles.protectionDesc}>10-second cooldown + must give a reason to quit.</Text>
+            </View>
+          </TouchableOpacity>
+
+          {/* Ruthless */}
+          <TouchableOpacity
+            style={[
+              styles.protectionCard,
+              styles.protectionCardRuthless,
+            ]}
+            onPress={() => handleSelectProtection('ruthless')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.protectionIcon}>🔴</Text>
+            <View style={styles.protectionTextContainer}>
+              <View style={styles.ruthlessHeader}>
+                <Text style={styles.protectionName}>Ruthless Mode</Text>
+                <View style={styles.proBadge}>
+                  <Text style={styles.proBadgeText}>PRO</Text>
+                </View>
+              </View>
+              <Text style={styles.protectionSubtitle}>No escape</Text>
+              <Text style={styles.protectionDesc}>Give Up is disabled. You MUST finish.</Text>
+            </View>
+            <Text style={styles.lockIcon}>🔒</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Incognito Mode Toggle */}
@@ -254,7 +339,7 @@ export function PrepareScreen({
             <Text style={styles.backButtonText}>Go Back</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -279,10 +364,11 @@ const styles = StyleSheet.create({
     backgroundColor: DS_COLORS.bgDeep,
   },
   content: {
-    flex: 1,
+    flexGrow: 1,
     paddingHorizontal: 24,
-    paddingVertical: 40,
-    justifyContent: 'space-between',
+    paddingTop: 24,
+    paddingBottom: 40,
+    gap: 20,
   },
   header: {
     alignItems: 'center',
@@ -302,10 +388,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   instructionsContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    gap: 20,
-    paddingVertical: 40,
+    gap: 16,
+    paddingVertical: 20,
   },
   instructionItem: {
     flexDirection: 'row',
@@ -373,6 +457,83 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: FONTS.heading,
     color: DS_COLORS.textPrimary,
+  },
+  // Protection Level
+  protectionSection: {
+    gap: 10,
+  },
+  protectionTitle: {
+    fontSize: 13,
+    fontFamily: FONTS.monoMedium,
+    color: DS_COLORS.textSecondary,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+    marginBottom: 2,
+  },
+  protectionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: DS_COLORS.bgSurface,
+    borderRadius: RADIUS.card,
+    padding: 14,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    gap: 12,
+  },
+  protectionCardSelected: {
+    borderColor: DS_COLORS.verified,
+    backgroundColor: 'rgba(46, 204, 113, 0.08)',
+  },
+  protectionCardSelectedStrict: {
+    borderColor: '#F39C12',
+    backgroundColor: 'rgba(243, 156, 18, 0.08)',
+  },
+  protectionCardRuthless: {
+    borderColor: 'rgba(233, 69, 96, 0.3)',
+    opacity: 0.6,
+  },
+  protectionIcon: {
+    fontSize: 22,
+  },
+  protectionTextContainer: {
+    flex: 1,
+    gap: 1,
+  },
+  protectionName: {
+    fontSize: 15,
+    fontFamily: FONTS.heading,
+    color: DS_COLORS.textPrimary,
+  },
+  protectionSubtitle: {
+    fontSize: 12,
+    fontFamily: FONTS.headingMedium,
+    color: DS_COLORS.textSecondary,
+  },
+  protectionDesc: {
+    fontSize: 11,
+    fontFamily: FONTS.body,
+    color: DS_COLORS.textMuted,
+    marginTop: 2,
+  },
+  ruthlessHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  proBadge: {
+    backgroundColor: DS_COLORS.coral,
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  proBadgeText: {
+    fontSize: 9,
+    fontFamily: FONTS.heading,
+    color: DS_COLORS.textPrimary,
+    letterSpacing: 1,
+  },
+  lockIcon: {
+    fontSize: 16,
   },
   buttonsContainer: {
     gap: 12,

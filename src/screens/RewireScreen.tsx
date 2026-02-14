@@ -1,0 +1,286 @@
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
+import { COLORS as DS_COLORS, FONTS, RADIUS } from '../constants/designSystem';
+import { getSessions } from '../utils/storage';
+import { getStreakData, StreakData } from '../utils/streakManager';
+import { getIsProUser } from '../utils/proManager';
+import {
+  ensureStartDate,
+  getRewireDay,
+  computeTrends,
+  computeBrainVsAverage,
+} from '../utils/rewireManager';
+import { evaluateChallenges } from '../utils/challengeManager';
+import type { Session } from '../types';
+
+// Sub-components
+import { RewireTimeline } from '../components/rewire/RewireTimeline';
+import { TodaysDose } from '../components/rewire/TodaysDose';
+import { FocusTrajectory } from '../components/rewire/FocusTrajectory';
+import { BrainVsAverage } from '../components/rewire/BrainVsAverage';
+import { YourTrends } from '../components/rewire/YourTrends';
+import { RewireStreak } from '../components/rewire/RewireStreak';
+import { ChallengesSection } from '../components/rewire/ChallengesSection';
+import { ScienceCards } from '../components/rewire/ScienceCards';
+import { SessionLog } from '../components/rewire/SessionLog';
+import { SourcesModal } from '../components/rewire/SourcesModal';
+import { PaywallModal } from '../components/PaywallModal';
+
+const REWIRE_PAYWALL_FEATURES = [
+  'See exactly how your brain compares to everyone else',
+  'Track whether your focus, stillness, and endurance are improving',
+  'Full score history and focus trajectory',
+  'Best streak and 30-day rewire calendar',
+  'Unlock Ruthless Mode — no escape once you start',
+  'Harder challenges that push your limits',
+  'Watermark-free share cards',
+  'Everything we build next',
+];
+
+export function RewireScreen() {
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [streakData, setStreakData] = useState<StreakData>({
+    currentStreak: 0,
+    lastSessionDate: null,
+    longestStreak: 0,
+  });
+  const [isPro, setIsPro] = useState(false);
+  const [startDate, setStartDateState] = useState<string>('');
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [showSources, setShowSources] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      const [sess, streak, pro] = await Promise.all([
+        getSessions(),
+        getStreakData(),
+        getIsProUser(),
+      ]);
+      const start = await ensureStartDate(sess);
+      setSessions(sess);
+      setStreakData(streak);
+      setIsPro(pro);
+      setStartDateState(start);
+    } catch {
+      // Defaults remain
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const scrollViewRef = useRef<ScrollView>(null);
+  const openPaywall = useCallback(() => setShowPaywall(true), []);
+
+  const handleTimelineScrollOffset = useCallback((y: number) => {
+    // Small delay to ensure the ScrollView has rendered
+    setTimeout(() => {
+      scrollViewRef.current?.scrollTo({ y: Math.max(0, y), animated: true });
+    }, 100);
+  }, []);
+
+  // ─── Computed Data ────────────────────────────────────────
+  const rewireDay = useMemo(
+    () => (startDate ? getRewireDay(sessions, startDate) : 0),
+    [sessions, startDate]
+  );
+
+  const trends = useMemo(() => computeTrends(sessions), [sessions]);
+  const brainComparison = useMemo(() => computeBrainVsAverage(sessions), [sessions]);
+  const challenges = useMemo(
+    () => evaluateChallenges(sessions, streakData, isPro),
+    [sessions, streakData, isPro]
+  );
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <StatusBar style="light" />
+        <View style={styles.loadingWrap}>
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <StatusBar style="light" />
+
+      <ScrollView
+        ref={scrollViewRef}
+        style={styles.scrollView}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* ─── Header ──────────────────────────────────────── */}
+        <View style={styles.header}>
+          <Text style={styles.title}>YOUR REWIRE</Text>
+          {rewireDay > 0 && (
+            <View style={styles.dayPill}>
+              <Text style={styles.dayPillText}>Day {rewireDay}</Text>
+            </View>
+          )}
+        </View>
+
+        {/* ─── 1. Rewire Timeline ──────────────────────────── */}
+        <RewireTimeline
+          sessions={sessions}
+          startDate={startDate}
+          onCurrentDayYOffset={handleTimelineScrollOffset}
+        />
+
+        {/* ─── 2. Today's Dose ─────────────────────────────── */}
+        <TodaysDose sessions={sessions} />
+
+        {/* ─── 3. Focus Trajectory ─────────────────────────── */}
+        <FocusTrajectory
+          sessions={sessions}
+          isPro={isPro}
+          onLockPress={openPaywall}
+        />
+
+        {/* ─── 4. Brain vs Average ─────────────────────────── */}
+        <BrainVsAverage
+          data={brainComparison}
+          isPro={isPro}
+          onLockPress={openPaywall}
+        />
+
+        {/* ─── 5. Your Trends ──────────────────────────────── */}
+        <YourTrends
+          trends={trends}
+          isPro={isPro}
+          onLockPress={openPaywall}
+        />
+
+        {/* ─── 6. Rewire Streak ────────────────────────────── */}
+        <RewireStreak
+          streakData={streakData}
+          sessions={sessions}
+          isPro={isPro}
+          onLockPress={openPaywall}
+        />
+
+        {/* ─── 7. Challenges ───────────────────────────────── */}
+        <ChallengesSection
+          challenges={challenges}
+          isPro={isPro}
+          onLockPress={openPaywall}
+        />
+
+        {/* ─── 8. The Science ──────────────────────────────── */}
+        <ScienceCards />
+
+        {/* ─── 9. Session Log ──────────────────────────────── */}
+        <SessionLog
+          sessions={sessions}
+          isPro={isPro}
+          onLockPress={openPaywall}
+        />
+
+        {/* ─── 10. View Sources ────────────────────────────── */}
+        <View style={styles.sourcesSection}>
+          <Text style={styles.sourcesIntro}>
+            Based on peer-reviewed neuroscience research
+          </Text>
+          <TouchableOpacity
+            onPress={() => setShowSources(true)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.sourcesLink}>View Sources</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+
+      {/* ─── Modals ────────────────────────────────────────── */}
+      <PaywallModal
+        visible={showPaywall}
+        onDismiss={() => setShowPaywall(false)}
+        features={REWIRE_PAYWALL_FEATURES}
+      />
+      <SourcesModal
+        visible={showSources}
+        onDismiss={() => setShowSources(false)}
+      />
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#1a1a2e',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  content: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 32,
+    gap: 28,
+  },
+  loadingWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    fontFamily: FONTS.body,
+    color: DS_COLORS.textMuted,
+  },
+
+  // Header
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  title: {
+    fontSize: 32,
+    fontFamily: FONTS.display,
+    color: DS_COLORS.textPrimary,
+    letterSpacing: 3,
+    textAlign: 'center',
+  },
+  dayPill: {
+    backgroundColor: DS_COLORS.coral,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: RADIUS.pill,
+  },
+  dayPillText: {
+    fontSize: 13,
+    fontFamily: FONTS.heading,
+    color: DS_COLORS.textPrimary,
+    letterSpacing: 0.5,
+  },
+
+  // Sources
+  sourcesSection: {
+    alignItems: 'center',
+    gap: 6,
+    paddingTop: 8,
+  },
+  sourcesIntro: {
+    fontSize: 12,
+    fontFamily: FONTS.body,
+    color: DS_COLORS.textMuted,
+    textAlign: 'center',
+  },
+  sourcesLink: {
+    fontSize: 14,
+    fontFamily: FONTS.bodyMedium,
+    color: DS_COLORS.coral,
+    textDecorationLine: 'underline',
+  },
+});

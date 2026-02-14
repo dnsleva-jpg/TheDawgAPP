@@ -91,14 +91,16 @@ export function SelfieScreen({
 
       
 
+      console.log('[Selfie] Taking photo...');
       const photo = await cameraRef.current.takePictureAsync({
         quality: 0.9,
       });
 
       if (!photo?.uri) {
-        throw new Error('No photo URI returned');
+        throw new Error('No photo URI returned from camera');
       }
 
+      console.log('[Selfie] Photo captured:', photo.uri);
       // Switch from camera to preview mode
       // This replaces the native camera with a regular <Image>
       setCapturedPhotoUri(photo.uri);
@@ -113,12 +115,18 @@ export function SelfieScreen({
 
   // ─── Capture helper ───
   const captureSelfie = useCallback(async (): Promise<string | null> => {
-    if (!viewShotRef.current?.capture) return null;
-    // Small delay to make sure the Image is fully rendered
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    if (!viewShotRef.current?.capture) {
+      console.log('[Selfie] ViewShot ref not available');
+      return null;
+    }
+    // Delay to ensure the Image is fully rendered before capturing
+    await new Promise((resolve) => setTimeout(resolve, 500));
     try {
-      return await viewShotRef.current.capture();
-    } catch {
+      const uri = await viewShotRef.current.capture();
+      console.log('[Selfie] Captured selfie:', uri);
+      return uri;
+    } catch (err) {
+      console.log('[Selfie] Capture failed:', err);
       return null;
     }
   }, []);
@@ -130,12 +138,19 @@ export function SelfieScreen({
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       const uri = await captureSelfie();
-      if (!uri) throw new Error('Could not capture selfie');
+      if (!uri) {
+        console.log('[Selfie] Share failed — captureSelfie returned null');
+        throw new Error('Could not capture selfie image. Please try again.');
+      }
+      console.log('[Selfie] Sharing selfie:', uri);
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(uri, { mimeType: 'image/jpeg', dialogTitle: 'Share your detox selfie' });
+      } else {
+        Alert.alert('Sharing Not Available', 'Sharing is not available on this device.');
       }
     } catch (error: any) {
-      Alert.alert('Share Failed', error?.message ?? 'Could not share.');
+      console.log('[Selfie] Share error:', error);
+      Alert.alert('Share Failed', error?.message ?? 'Could not share. Please try again.');
     } finally {
       setIsProcessing(false);
     }
@@ -147,18 +162,28 @@ export function SelfieScreen({
     setIsProcessing(true);
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      const uri = await captureSelfie();
-      if (!uri) throw new Error('Could not capture selfie');
+
+      // Request permissions first
       const { status } = await MediaLibrary.requestPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Needed', 'Please allow photo library access to save.');
+        Alert.alert('Permission Needed', 'Please allow photo library access in Settings to save your selfie.');
+        setIsProcessing(false);
         return;
       }
+
+      const uri = await captureSelfie();
+      if (!uri) {
+        console.log('[Selfie] Save failed — captureSelfie returned null');
+        throw new Error('Could not capture selfie image. Please try again.');
+      }
+
+      console.log('[Selfie] Saving to camera roll:', uri);
       await MediaLibrary.createAssetAsync(uri);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert('Saved!', 'Selfie saved to your camera roll.', [{ text: 'Done!', onPress: onComplete }]);
     } catch (error: any) {
-      Alert.alert('Save Failed', error?.message ?? 'Could not save.');
+      console.log('[Selfie] Save error:', error);
+      Alert.alert('Save Failed', error?.message ?? 'Could not save. Please try again.');
     } finally {
       setIsProcessing(false);
     }
@@ -236,7 +261,7 @@ export function SelfieScreen({
       <View style={styles.coralDivider} />
 
       {/* Handle */}
-      <Text style={styles.handleText}>@TheRAWDAWGapp</Text>
+      <Text style={styles.handleText}>THE RAW DAWG APP</Text>
       
       {/* Tagline */}
       <Text style={styles.taglineText}>the art of doing absolutely nothing</Text>
@@ -288,7 +313,7 @@ export function SelfieScreen({
                 disabled={isProcessing}
                 activeOpacity={0.8}
               >
-                <Text style={styles.takePhotoButtonText}>SHARE</Text>
+                <Text style={styles.takePhotoButtonText}>SHARE SCORE CARD</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.button, styles.retakeButton, { flex: 1 }]}

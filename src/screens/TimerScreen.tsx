@@ -7,7 +7,9 @@ import {
   SafeAreaView,
   Alert,
   Pressable,
+  Modal,
 } from 'react-native';
+import type { ProtectionLevel } from './PrepareScreen';
 import { StatusBar } from 'expo-status-bar';
 import { useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
 import { Camera } from 'react-native-vision-camera-face-detector';
@@ -37,19 +39,29 @@ interface TimerScreenProps {
   ) => void;
   onCancel: () => void;
   incognitoMode?: boolean;
+  protectionLevel?: ProtectionLevel;
 }
+
+const STRICT_COOLDOWN_SECONDS = 10;
+const QUIT_REASONS = ['Bored', 'Distracted', 'Emergency', 'Other'] as const;
 
 export function TimerScreen({
   durationSeconds,
   onComplete,
   onCancel,
   incognitoMode = false,
+  protectionLevel = 'easy',
 }: TimerScreenProps) {
   const device = useCameraDevice('front');
   const { hasPermission, requestPermission } = useCameraPermission();
   const [showControls, setShowControls] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isStoppingRecording, setIsStoppingRecording] = useState(false);
+
+  // Strict mode quit modal
+  const [showStrictModal, setShowStrictModal] = useState(false);
+  const [strictCooldown, setStrictCooldown] = useState(STRICT_COOLDOWN_SECONDS);
+  const [selectedReason, setSelectedReason] = useState<string | null>(null);
   const [liveStats, setLiveStats] = useState({ stillness: 0, blinks: 0 });
 
   const cameraRef = useRef<any>(null);
@@ -311,6 +323,13 @@ export function TimerScreen({
     }
   }, [status, handleComplete]);
 
+  // Strict mode cooldown timer
+  useEffect(() => {
+    if (!showStrictModal || strictCooldown <= 0) return;
+    const timer = setTimeout(() => setStrictCooldown(prev => prev - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [showStrictModal, strictCooldown]);
+
   const cancelRecording = useCallback(async () => {
     if (isRecordingRef.current && cameraRef.current) {
       try {
@@ -323,6 +342,21 @@ export function TimerScreen({
   }, []);
 
   const handleCancel = () => {
+    if (protectionLevel === 'ruthless') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      Alert.alert('🔒 Ruthless Mode', 'No escape. You MUST finish.');
+      return;
+    }
+
+    if (protectionLevel === 'strict') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      setStrictCooldown(STRICT_COOLDOWN_SECONDS);
+      setSelectedReason(null);
+      setShowStrictModal(true);
+      return;
+    }
+
+    // Easy mode — original behavior
     Alert.alert(
       'End Session?',
       'Save your progress and see your stats?',
@@ -347,6 +381,17 @@ export function TimerScreen({
         },
       ]
     );
+  };
+
+  const handleStrictConfirmQuit = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    setShowStrictModal(false);
+    finish();
+  };
+
+  const handleStrictDismiss = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setShowStrictModal(false);
   };
 
   const handlePauseResume = () => {
@@ -439,12 +484,18 @@ export function TimerScreen({
                     </TouchableOpacity>
                   )}
                   
-                  <TouchableOpacity
-                    style={styles.incognitoEndButton}
-                    onPress={handleCancel}
-                  >
-                    <Text style={styles.incognitoEndButtonText}>END SESSION</Text>
-                  </TouchableOpacity>
+                  {protectionLevel === 'ruthless' ? (
+                    <View style={[styles.incognitoEndButton, { opacity: 0.3 }]}>
+                      <Text style={styles.incognitoEndButtonText}>🔒 LOCKED</Text>
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.incognitoEndButton}
+                      onPress={handleCancel}
+                    >
+                      <Text style={styles.incognitoEndButtonText}>END SESSION</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
                 
                 <Text style={styles.incognitoHint}>Tap screen to hide controls</Text>
@@ -527,16 +578,81 @@ export function TimerScreen({
                 </TouchableOpacity>
               )}
               
-              <TouchableOpacity
-                style={styles.giveUpButton}
-                onPress={handleCancel}
-              >
-                <Text style={styles.giveUpButtonText}>GIVE UP</Text>
-              </TouchableOpacity>
+              {protectionLevel === 'ruthless' ? (
+                <View style={styles.giveUpButtonDisabled}>
+                  <Text style={styles.giveUpButtonTextDisabled}>🔒 LOCKED</Text>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={styles.giveUpButton}
+                  onPress={handleCancel}
+                >
+                  <Text style={styles.giveUpButtonText}>GIVE UP</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </SafeAreaView>
         </View>
         )}
+
+        {/* Strict Mode Quit Modal */}
+        <Modal
+          visible={showStrictModal}
+          animationType="fade"
+          transparent={true}
+          onRequestClose={handleStrictDismiss}
+        >
+          <View style={styles.strictOverlay}>
+            <View style={styles.strictCard}>
+              <Text style={styles.strictTitle}>Are you sure?</Text>
+
+              {strictCooldown > 0 ? (
+                <>
+                  <Text style={styles.strictCooldownNumber}>{strictCooldown}</Text>
+                  <Text style={styles.strictMessage}>Take a breath. You've got this.</Text>
+                </>
+              ) : !selectedReason ? (
+                <>
+                  <Text style={styles.strictMessage}>Why are you quitting?</Text>
+                  <View style={styles.reasonContainer}>
+                    {QUIT_REASONS.map((reason) => (
+                      <TouchableOpacity
+                        key={reason}
+                        style={styles.reasonButton}
+                        onPress={() => {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          setSelectedReason(reason);
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.reasonButtonText}>{reason}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.strictMessage}>Reason: {selectedReason}</Text>
+                  <TouchableOpacity
+                    style={styles.strictQuitButton}
+                    onPress={handleStrictConfirmQuit}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.strictQuitButtonText}>Quit Session</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+
+              <TouchableOpacity
+                style={styles.strictNevermindButton}
+                onPress={handleStrictDismiss}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.strictNevermindText}>Never mind</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       </View>
     </View>
   );
@@ -841,5 +957,95 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.body,
     color: DS_COLORS.textMuted,
     textAlign: 'center',
+  },
+
+  // Give Up disabled (Ruthless)
+  giveUpButtonDisabled: {
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+    opacity: 0.3,
+  },
+  giveUpButtonTextDisabled: {
+    fontSize: 13,
+    fontFamily: FONTS.body,
+    color: DS_COLORS.textDisabled,
+    letterSpacing: 1,
+  },
+
+  // Strict mode quit modal
+  strictOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
+  strictCard: {
+    width: '100%',
+    backgroundColor: DS_COLORS.bgSurface,
+    borderRadius: 20,
+    padding: 32,
+    alignItems: 'center',
+    gap: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  strictTitle: {
+    fontSize: 24,
+    fontFamily: FONTS.heading,
+    color: DS_COLORS.textPrimary,
+    textAlign: 'center',
+  },
+  strictCooldownNumber: {
+    fontSize: 64,
+    fontFamily: FONTS.display,
+    color: '#F39C12',
+    textAlign: 'center',
+  },
+  strictMessage: {
+    fontSize: 16,
+    fontFamily: FONTS.body,
+    color: DS_COLORS.textSecondary,
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  reasonContainer: {
+    width: '100%',
+    gap: 10,
+  },
+  reasonButton: {
+    backgroundColor: DS_COLORS.bgSurfaceLight,
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  reasonButtonText: {
+    fontSize: 16,
+    fontFamily: FONTS.headingMedium,
+    color: DS_COLORS.textPrimary,
+  },
+  strictQuitButton: {
+    width: '100%',
+    backgroundColor: '#E74C3C',
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  strictQuitButtonText: {
+    fontSize: 16,
+    fontFamily: FONTS.heading,
+    color: DS_COLORS.textPrimary,
+    letterSpacing: 1,
+  },
+  strictNevermindButton: {
+    paddingVertical: 8,
+  },
+  strictNevermindText: {
+    fontSize: 14,
+    fontFamily: FONTS.bodyMedium,
+    color: DS_COLORS.textMuted,
   },
 });

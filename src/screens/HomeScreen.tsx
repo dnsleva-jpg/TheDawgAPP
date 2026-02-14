@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import MaskedView from '@react-native-masked-view/masked-view';
@@ -58,10 +59,15 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar style="light" />
       
-      <View style={styles.content}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        bounces={true}
+      >
         <View style={styles.header}>
           {/* Gradient Title */}
           <MaskedView
@@ -104,6 +110,7 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
           <DurationPicker
             selectedDuration={selectedDuration}
             onSelectDuration={setSelectedDuration}
+            onStartSession={onStartSession}
           />
         </View>
 
@@ -155,7 +162,7 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
             Put your phone down. No distractions. Just exist.
           </Text>
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -166,23 +173,26 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: DS_COLORS.bgDeep,
   },
-  content: {
+  scrollView: {
     flex: 1,
+  },
+  content: {
+    flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: 20,
-    paddingBottom: 40,
+    paddingTop: 8,
+    paddingBottom: 12,
   },
   header: {
     alignItems: 'center',
-    marginTop: 20,
-    marginBottom: 24,
+    marginTop: 8,
+    marginBottom: 12,
   },
   title: {
-    fontSize: 44, // Adjusted for longer title "THE RAW DAWG APP"
+    fontSize: 40,
     fontFamily: FONTS.display, // Bebas Neue
     color: DS_COLORS.textPrimary, // Fallback color (used by MaskedView)
     letterSpacing: 2,
-    marginBottom: 12,
+    marginBottom: 6,
     textTransform: 'uppercase',
   },
   subtitle: {
@@ -198,16 +208,16 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.card,
     borderWidth: 2,
     borderColor: DS_COLORS.coral,
-    paddingVertical: 16,
+    paddingVertical: 10,
     paddingHorizontal: 20,
-    marginBottom: 24,
+    marginBottom: 12,
     alignItems: 'center',
-    gap: 4,
+    gap: 2,
     ...SHADOWS.coralButton,
   },
   streakEmoji: {
-    fontSize: 32,
-    marginBottom: 2,
+    fontSize: 24,
+    marginBottom: 0,
   },
   streakText: {
     fontSize: 18,
@@ -225,16 +235,16 @@ const styles = StyleSheet.create({
   },
   pickerContainer: {
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 8,
   },
   footer: {
-    gap: 20,
+    gap: 12,
     marginTop: 'auto',
   },
   // Brand Kit - Primary CTA (Start Session)
   startButton: {
     backgroundColor: DS_COLORS.coral,
-    paddingVertical: 16,
+    paddingVertical: 14,
     paddingHorizontal: 32,
     borderRadius: RADIUS.button, // 14px per brand kit
     alignItems: 'center',
@@ -254,8 +264,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   statsContainer: {
-    marginTop: 16,
-    marginBottom: 24,
+    marginTop: 8,
+    marginBottom: 12,
     width: '100%',
     paddingHorizontal: 4,
   },
@@ -267,12 +277,12 @@ const styles = StyleSheet.create({
   statCard: {
     flex: 1,
     backgroundColor: DS_COLORS.bgSurface,
-    padding: 12,
+    padding: 8,
     borderRadius: RADIUS.card,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.04)', // Brand kit card border
-    gap: 4,
+    gap: 2,
   },
   statEmoji: {
     fontSize: 16,

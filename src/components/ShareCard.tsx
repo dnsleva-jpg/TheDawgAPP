@@ -64,15 +64,24 @@ function formatDuration(sec: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
+// ─── Protection level labels ─────────────────────────────────────────────────
+const PROTECTION_LABELS: Record<string, { label: string; color: string }> = {
+  easy: { label: 'EASY MODE', color: '#2ECC71' },
+  strict: { label: 'STRICT MODE', color: '#F39C12' },
+  ruthless: { label: 'RUTHLESS MODE', color: '#E74C3C' },
+};
+
 // ─── Props ───────────────────────────────────────────────────────────────────
 interface ShareCardProps {
   scoringResults: SessionResults;
   completedSeconds: number;
+  protectionLevel?: string;
+  isPro?: boolean;
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
 export const ShareCard = forwardRef<ViewShot, ShareCardProps>(
-  ({ scoringResults, completedSeconds }, ref) => {
+  ({ scoringResults, completedSeconds, protectionLevel = 'easy', isPro = false }, ref) => {
     const score = Math.round(scoringResults.rawDawgScore);
     const baseGrade = scoringResults.grade;
     const displayGrade = getGradeWithModifier(scoringResults.rawDawgScore, baseGrade);
@@ -96,7 +105,7 @@ export const ShareCard = forwardRef<ViewShot, ShareCardProps>(
         >
           {/* 1. TOP — Branding */}
           <View style={styles.topSection}>
-            <Text style={styles.brandName}>RAW DAWG</Text>
+            <Text style={styles.brandName}>The RAW DAWG App</Text>
             <View style={styles.verifiedBadge}>
               <Text style={styles.verifiedDot}>●</Text>
               <Text style={styles.verifiedText}>CAMERA VERIFIED</Text>
@@ -132,12 +141,26 @@ export const ShareCard = forwardRef<ViewShot, ShareCardProps>(
             </View>
           </View>
 
-          {/* 5. BOTTOM — Handle + tagline */}
+          {/* 5. Protection Level Badge */}
+          {protectionLevel && PROTECTION_LABELS[protectionLevel] && (
+            <View style={[styles.protectionPill, { borderColor: PROTECTION_LABELS[protectionLevel].color }]}>
+              <Text style={[styles.protectionPillText, { color: PROTECTION_LABELS[protectionLevel].color }]}>
+                {PROTECTION_LABELS[protectionLevel].label}
+              </Text>
+            </View>
+          )}
+
+          {/* 6. BOTTOM — Handle + tagline */}
           <View style={styles.bottomSection}>
             <View style={styles.divider} />
             <Text style={styles.handle}>@TheRAWDAWGapp</Text>
             <Text style={styles.tagline}>the art of doing absolutely nothing</Text>
           </View>
+
+          {/* FREE: subtle watermark */}
+          {!isPro && (
+            <Text style={styles.watermark}>rawdawg.app</Text>
+          )}
         </LinearGradient>
       </ViewShot>
     );
@@ -244,7 +267,22 @@ const styles = StyleSheet.create({
     color: '#F0EDE8',
   },
 
-  // 5. Bottom
+  // 5. Protection level pill
+  protectionPill: {
+    alignSelf: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 100,
+    borderWidth: 1,
+  },
+  protectionPillText: {
+    fontSize: 11,
+    fontFamily: FONTS.monoMedium,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+  },
+
+  // 6. Bottom
   bottomSection: {
     alignItems: 'center',
     gap: 6,
@@ -265,5 +303,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: FONTS.body,
     color: 'rgba(255, 255, 255, 0.3)',
+  },
+
+  // Watermark (free users only)
+  watermark: {
+    position: 'absolute',
+    bottom: 12,
+    right: 14,
+    fontSize: 10,
+    fontFamily: FONTS.body,
+    color: 'rgba(255, 255, 255, 0.2)',
   },
 });

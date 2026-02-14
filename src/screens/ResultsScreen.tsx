@@ -25,7 +25,11 @@ import { getSessions } from '../utils/storage';
 import { calculateStats, formatTotalTime } from '../utils/stats';
 import { saveVideoToPhotos } from '../utils/videoProcessor';
 import { ShareCard } from '../components/ShareCard';
+import { PaywallModal } from '../components/PaywallModal';
 import type { SessionResults } from '../scoring/scoringEngine';
+import { getIsProUser } from '../utils/proManager';
+
+import type { ProtectionLevel } from './PrepareScreen';
 
 interface ResultsScreenProps {
   completedSeconds: number;
@@ -33,10 +37,17 @@ interface ResultsScreenProps {
   stillnessPercent?: number;
   blinksCount?: number;
   scoringResults?: SessionResults | null;
+  protectionLevel?: ProtectionLevel;
   onGoHome: () => void;
 }
 
-export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0, blinksCount = 0, scoringResults, onGoHome }: ResultsScreenProps) {
+const PROTECTION_LABELS: Record<string, { label: string; color: string }> = {
+  easy: { label: 'EASY MODE', color: '#2ECC71' },
+  strict: { label: 'STRICT MODE', color: '#F39C12' },
+  ruthless: { label: 'RUTHLESS MODE', color: '#E74C3C' },
+};
+
+export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0, blinksCount = 0, scoringResults, protectionLevel = 'easy', onGoHome }: ResultsScreenProps) {
   // Safety check: ensure completedSeconds is valid
   const safeCompletedSeconds = (completedSeconds >= 0 && !isNaN(completedSeconds)) 
     ? completedSeconds 
@@ -79,9 +90,12 @@ export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0
     longestSessionSeconds: 0,
     currentStreak: 0,
   });
+  const [isPro, setIsPro] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
 
   useEffect(() => {
     loadStats();
+    getIsProUser().then(setIsPro).catch(() => {});
   }, []);
 
   const loadStats = async () => {
@@ -313,6 +327,34 @@ export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0
     onGoHome();
   };
 
+  // DID YOU KNOW? hints
+  const DID_YOU_KNOW_HINTS = [
+    "You just did what 67% of people would rather take an electric shock than attempt.",
+    "Every session like this strengthens the part of your brain that says 'no' to the scroll.",
+    "Your blink rate during that session tells us how deep your focus went. Screens make you forget to blink — stillness brings it back.",
+    "Heavy phone users have the same dopamine receptor changes as drug addicts. You're reversing that right now.",
+    "The average person picks up their phone 144 times a day. You just proved you don't have to.",
+    "Brain fog isn't permanent. It's your dopamine receptors recalibrating. Each session speeds that up.",
+    "4 days of doing this for 20 minutes measurably improves your attention. You're on your way.",
+    "Your phone is engineered like a slot machine — random rewards that keep you pulling. You just stepped away from the machine.",
+    "The restlessness you felt? That's withdrawal. It means your brain is noticing the change. Good.",
+    "After 2 weeks of this, people's focus improved by the equivalent of 10 years of cognitive decline. Keep going.",
+    "Your prefrontal cortex — the part that controls decisions and willpower — just got a workout.",
+    "Screen time drops your blink rate by 60%. Sitting still brings it back. Your eyes are thanking you.",
+    "The brain fog you feel after scrolling? It's real. Your dopamine system is oversaturated. This is the reset.",
+    "91% of people who restricted their phone use for 2 weeks saw better focus, sleep, or mental health.",
+    "You're not just sitting still. You're training your brain to find reward in reality instead of a screen.",
+    "The first 3 days are the hardest. If you're here, you're already ahead of most people.",
+    "Your brain physically rewires based on what you repeatedly do. You just chose stillness over stimulation.",
+    "Dopamine from your phone comes cheap and fast. The kind you build from stillness lasts longer and feels deeper.",
+    "8 weeks of practice like this changes 8 measurable regions of your brain. You're not imagining the difference.",
+    "The scroll trains your brain to need constant input. This trains it to be enough on its own.",
+  ];
+  const didYouKnowHint = useMemo(
+    () => DID_YOU_KNOW_HINTS[Math.floor(Math.random() * DID_YOU_KNOW_HINTS.length)],
+    []
+  );
+
   // Motivational copy — pick once on mount so it doesn't change on re-render
   const motivationalCopy = useMemo(() => {
     const score = scoringResults?.rawDawgScore ?? 0;
@@ -430,9 +472,16 @@ export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0
               </View>
             </View>
 
-            {/* 5. Camera Verified Badge */}
-            <View style={styles.verifiedBadge}>
-              <Text style={styles.verifiedText}>CAMERA VERIFIED</Text>
+            {/* 5. Camera Verified Badge + Protection Level */}
+            <View style={styles.badgeRow}>
+              <View style={styles.verifiedBadge}>
+                <Text style={styles.verifiedText}>CAMERA VERIFIED</Text>
+              </View>
+              <View style={[styles.protectionBadge, { borderColor: PROTECTION_LABELS[protectionLevel].color }]}>
+                <Text style={[styles.protectionBadgeText, { color: PROTECTION_LABELS[protectionLevel].color }]}>
+                  {PROTECTION_LABELS[protectionLevel].label}
+                </Text>
+              </View>
             </View>
 
             {/* 6. Motivational Copy */}
@@ -489,13 +538,21 @@ export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0
                   <Text style={styles.miniStatLabel}>Best</Text>
                 </View>
 
-                <View style={styles.miniStatCard}>
-                  <Text style={styles.miniStatEmoji}>⌀</Text>
-                  <Text style={[styles.miniStatValue, { color: scoreColor(stats.avgRawDawgScore7d ?? 0) }]}>
-                    {stats.avgRawDawgScore7d != null ? Math.round(stats.avgRawDawgScore7d) : '—'}
-                  </Text>
-                  <Text style={styles.miniStatLabel}>Avg 7d</Text>
-                </View>
+                {isPro ? (
+                  <View style={styles.miniStatCard}>
+                    <Text style={styles.miniStatEmoji}>⌀</Text>
+                    <Text style={[styles.miniStatValue, { color: scoreColor(stats.avgRawDawgScore7d ?? 0) }]}>
+                      {stats.avgRawDawgScore7d != null ? Math.round(stats.avgRawDawgScore7d) : '—'}
+                    </Text>
+                    <Text style={styles.miniStatLabel}>Avg 7d</Text>
+                  </View>
+                ) : (
+                  <TouchableOpacity style={styles.miniStatCard} onPress={() => setShowPaywall(true)} activeOpacity={0.7}>
+                    <Text style={styles.miniStatEmoji}>🔒</Text>
+                    <Text style={[styles.miniStatValue, { color: DS_COLORS.coral, fontSize: 10 }]}>PRO</Text>
+                    <Text style={styles.miniStatLabel}>Avg 7d</Text>
+                  </TouchableOpacity>
+                )}
 
                 <View style={styles.miniStatCard}>
                   <Text style={styles.miniStatEmoji}>🔥</Text>
@@ -543,6 +600,12 @@ export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0
             )}
           </View>
         )}
+
+        {/* DID YOU KNOW? Card */}
+        <View style={styles.didYouKnowCard}>
+          <Text style={styles.didYouKnowLabel}>DID YOU KNOW?</Text>
+          <Text style={styles.didYouKnowText}>{didYouKnowHint}</Text>
+        </View>
 
         {/* Action Buttons */}
         <View style={styles.actions}>
@@ -776,6 +839,8 @@ export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0
                 ref={shareCardRef}
                 scoringResults={scoringResults}
                 completedSeconds={safeCompletedSeconds}
+                protectionLevel={protectionLevel}
+                isPro={isPro}
               />
             )}
             <View style={styles.shareCardActions}>
@@ -809,6 +874,13 @@ export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0
           </ScrollView>
         </View>
       </Modal>
+
+      {/* Paywall Modal (for pro-gated stats) */}
+      <PaywallModal
+        visible={showPaywall}
+        onDismiss={() => setShowPaywall(false)}
+        onProActivated={() => { setIsPro(true); setShowPaywall(false); }}
+      />
     </SafeAreaView>
   );
 }
@@ -944,9 +1016,15 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
 
-  // ─── 5. Camera Verified Badge ──────────────────────────────────────
+  // ─── 5. Camera Verified Badge + Protection Level ────────────────────
+  badgeRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
   verifiedBadge: {
-    alignSelf: 'center',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 100,
@@ -957,6 +1035,18 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: FONTS.monoMedium,
     color: DS_COLORS.verified,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+  },
+  protectionBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 100,
+    borderWidth: 1,
+  },
+  protectionBadgeText: {
+    fontSize: 11,
+    fontFamily: FONTS.monoMedium,
     letterSpacing: 2,
     textTransform: 'uppercase',
   },
@@ -1073,6 +1163,27 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.heading,
     letterSpacing: 0.5,
   },
+  // ─── DID YOU KNOW? Card ──────────────────────────────────────────
+  didYouKnowCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+    padding: 16,
+    gap: 8,
+  },
+  didYouKnowLabel: {
+    fontSize: 10,
+    fontFamily: FONTS.monoMedium,
+    color: DS_COLORS.coral,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+  },
+  didYouKnowText: {
+    fontSize: 14,
+    fontFamily: FONTS.headingMedium,
+    color: DS_COLORS.textPrimary,
+    lineHeight: 20,
+  },
+
   actions: {
     gap: 10,
   },
