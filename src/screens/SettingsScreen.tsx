@@ -16,7 +16,7 @@ import { COLORS as DS_COLORS, FONTS, BRAND } from '../constants/designSystem';
 const APP_VERSION = '1.0.0';
 const PRIVACY_URL = 'https://dnsleva-jpg.github.io/TheDawgAPP/docs/privacy-policy.html';
 const CONTACT_EMAIL = 'dustin@sixeightestates.com';
-const APP_STORE_URL = 'https://apps.apple.com/app/dawg/id6742598449';
+const APP_STORE_URL = 'https://apps.apple.com/app/dawg/id6758909198';
 
 function openURL(url: string) {
   Linking.openURL(url).catch(() => {
