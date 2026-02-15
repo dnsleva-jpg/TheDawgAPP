@@ -28,7 +28,7 @@ function scoreToY(score: number): number {
 export function FocusTrajectory({ sessions, isPro, onLockPress }: Props) {
   const scoredSessions = useMemo(() => {
     return sessions
-      .filter((s) => s.rawDawgScore != null)
+      .filter((s) => s.dawgScore != null)
       .sort((a, b) => a.timestamp - b.timestamp)
       .slice(-14);
   }, [sessions]);
@@ -52,7 +52,7 @@ export function FocusTrajectory({ sessions, isPro, onLockPress }: Props) {
   // Compute rolling average (3-session)
   const rollingAvg = scoredSessions.map((s, i) => {
     const window = scoredSessions.slice(Math.max(0, i - 2), i + 1);
-    return window.reduce((sum, w) => sum + (w.rawDawgScore ?? 0), 0) / window.length;
+    return window.reduce((sum, w) => sum + (w.dawgScore ?? 0), 0) / window.length;
   });
 
   return (
@@ -78,7 +78,7 @@ export function FocusTrajectory({ sessions, isPro, onLockPress }: Props) {
           {/* Score dots + line */}
           {scoredSessions.map((s, i) => {
             const x = scoredSessions.length > 1 ? (i / (scoredSessions.length - 1)) * chartWidth : chartWidth / 2;
-            const y = scoreToY(s.rawDawgScore ?? 0);
+            const y = scoreToY(s.dawgScore ?? 0);
             const isVisible = i < visibleCount;
 
             return (
@@ -116,7 +116,7 @@ export function FocusTrajectory({ sessions, isPro, onLockPress }: Props) {
                         transform: [
                           {
                             rotate: `${Math.atan2(
-                              scoreToY(scoredSessions[i + 1]?.rawDawgScore ?? 0) - y,
+                              scoreToY(scoredSessions[i + 1]?.dawgScore ?? 0) - y,
                               spacing
                             )}rad`,
                           },

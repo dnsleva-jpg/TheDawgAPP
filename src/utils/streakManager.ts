@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const STREAK_STORAGE_KEY = '@raw_dawg_streak';
+const STREAK_STORAGE_KEY = '@dawg_streak';
 
 export interface StreakData {
   currentStreak: number;

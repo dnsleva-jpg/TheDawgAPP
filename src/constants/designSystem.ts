@@ -1,4 +1,4 @@
-// The Raw Dawg App - Complete Design System
+// The D.A.W.G. App - Complete Design System
 // Based on brand kit dated February 4, 2026
 
 export const COLORS = {
@@ -80,8 +80,8 @@ export const SPACING = {
 
 // App Identity
 export const BRAND = {
-  appName: 'The Raw Dawg App',
+  appName: 'The D.A.W.G. App',
   tagline: 'The art of doing absolutely nothing',
-  handle: '@TheRAWDAWGapp',
+  handle: '@TheDAWGApp',
   appStoreSubtitle: 'Prove you stayed present. Camera-verified focus.',
 };

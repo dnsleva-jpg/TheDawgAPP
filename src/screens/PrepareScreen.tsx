@@ -116,7 +116,7 @@ export function PrepareScreen({
           <View style={styles.permissionContainer}>
             <Text style={styles.permissionTitle}>📸 Permissions Required</Text>
             <Text style={styles.permissionText}>
-              The Raw Dawg App needs camera and photo library access to verify your session and save your results.
+              The D.A.W.G. App needs camera and photo library access to verify your session and save your results.
             </Text>
             <Text style={styles.permissionSubtext}>
               Requesting permissions...
@@ -136,7 +136,7 @@ export function PrepareScreen({
           <View style={styles.permissionContainer}>
             <Text style={styles.permissionTitle}>Permissions Required</Text>
             <Text style={styles.permissionText}>
-              Raw Dawg needs Camera and Photos access to verify your sessions and save your results.
+              D.A.W.G. needs Camera and Photos access to verify your sessions and save your results.
             </Text>
             <Text style={styles.permissionText}>
               Please enable them in Settings.
@@ -199,8 +199,8 @@ export function PrepareScreen({
         return;
       }
       Alert.alert(
-        'Raw Dawg Pro',
-        'Ruthless Mode requires Raw Dawg Pro — $4.99/month.\n\nComing soon!',
+        'D.A.W.G. Pro',
+        'Ruthless Mode requires D.A.W.G. Pro — $4.99/month.\n\nComing soon!',
         [{ text: 'OK' }]
       );
       return;

@@ -69,7 +69,7 @@ export function PaywallModal({ visible, onDismiss, onProActivated, features }: P
           <Text style={styles.heroEmoji}>🐕</Text>
 
           {/* Title */}
-          <Text style={styles.title}>RAW DAWG PRO</Text>
+          <Text style={styles.title}>D.A.W.G. PRO</Text>
           <Text style={styles.subtitle}>Unlock the full experience</Text>
 
           {/* Feature list */}

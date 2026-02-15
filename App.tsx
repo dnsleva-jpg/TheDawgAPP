@@ -128,7 +128,7 @@ function AppContent() {
       blinksCount: sessionScoringResults
         ? Math.round(sessionScoringResults.blinksPerMinute * (seconds / 60))
         : (blinks ?? 0),
-      rawDawgScore: sessionScoringResults?.rawDawgScore,
+      dawgScore: sessionScoringResults?.dawgScore,
       stillnessScore: sessionScoringResults?.stillnessScore,
       blinkScore: sessionScoringResults?.blinkScore,
       durationScore: sessionScoringResults?.durationScore,

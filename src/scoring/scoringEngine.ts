@@ -35,7 +35,7 @@ export interface FrameResult {
 }
 
 export interface SessionResults {
-  rawDawgScore: number;
+  dawgScore: number;
   stillnessScore: number;
   blinkScore: number;
   durationScore: number;
@@ -421,9 +421,9 @@ export class ScoringEngine {
     console.log(`[SCORE-DUR] actual=${actualSeconds.toFixed(0)}s committed=${committedDurationSeconds ?? 'N/A'}s ratio=${completionRatio.toFixed(2)} raw=${rawDurationScore.toFixed(1)} final=${durationScore.toFixed(1)}`);
     // #endregion
 
-    // Composite Raw Dawg Score
+    // Composite DAWG Score
     const comp = this.cfg.composite;
-    const rawDawgScore = clamp(
+    const dawgScore = clamp(
       0,
       100,
       stillnessScore * comp.stillnessWeight +
@@ -432,10 +432,10 @@ export class ScoringEngine {
     );
 
     // Grade lookup
-    const gradeEntry = this.cfg.grades.find((g) => rawDawgScore >= g.min) ?? this.cfg.grades[this.cfg.grades.length - 1];
+    const gradeEntry = this.cfg.grades.find((g) => dawgScore >= g.min) ?? this.cfg.grades[this.cfg.grades.length - 1];
 
     const results = {
-      rawDawgScore: Math.round(rawDawgScore * 10) / 10,
+      dawgScore: Math.round(dawgScore * 10) / 10,
       stillnessScore: Math.round(stillnessScore * 10) / 10,
       blinkScore: Math.round(blinkScore * 10) / 10,
       durationScore: Math.round(durationScore * 10) / 10,
@@ -447,7 +447,7 @@ export class ScoringEngine {
       facePresencePercent,
     };
     // #region agent log
-    console.log(`[SCORE-FINAL] rawDawg=${results.rawDawgScore} still=${results.stillnessScore}*${comp.stillnessWeight}=${(stillnessScore*comp.stillnessWeight).toFixed(1)} blink=${results.blinkScore}*${comp.blinkWeight}=${(blinkScore*comp.blinkWeight).toFixed(1)} dur=${results.durationScore}*${comp.durationWeight}=${(durationScore*comp.durationWeight).toFixed(1)} grade=${results.grade} bpm=${results.blinksPerMinute} face=${results.facePresencePercent}%`);
+    console.log(`[SCORE-FINAL] dawg=${results.dawgScore} still=${results.stillnessScore}*${comp.stillnessWeight}=${(stillnessScore*comp.stillnessWeight).toFixed(1)} blink=${results.blinkScore}*${comp.blinkWeight}=${(blinkScore*comp.blinkWeight).toFixed(1)} dur=${results.durationScore}*${comp.durationWeight}=${(durationScore*comp.durationWeight).toFixed(1)} grade=${results.grade} bpm=${results.blinksPerMinute} face=${results.facePresencePercent}%`);
     // #endregion
     return results;
   }

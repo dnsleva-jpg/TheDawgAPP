@@ -223,9 +223,9 @@ export function SelfieScreen({
         <>
           {/* Score + Grade */}
           <View style={styles.scoreRow}>
-            <Text style={styles.statsScore}>{Math.round(scoringResults.rawDawgScore)}</Text>
+            <Text style={styles.statsScore}>{Math.round(scoringResults.dawgScore)}</Text>
             <Text style={[styles.statsGrade, { color: gradeColor(scoringResults.grade) }]}>
-              {getGradeWithModifier(scoringResults.rawDawgScore, scoringResults.grade)}
+              {getGradeWithModifier(scoringResults.dawgScore, scoringResults.grade)}
             </Text>
           </View>
 
@@ -261,7 +261,7 @@ export function SelfieScreen({
       <View style={styles.coralDivider} />
 
       {/* Handle */}
-      <Text style={styles.handleText}>THE RAW DAWG APP</Text>
+      <Text style={styles.handleText}>THE D.A.W.G. APP</Text>
       
       {/* Tagline */}
       <Text style={styles.taglineText}>the art of doing absolutely nothing</Text>

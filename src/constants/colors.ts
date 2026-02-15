@@ -1,4 +1,4 @@
-// Legacy colors file - updated to match The Raw Dawg App brand kit
+// Legacy colors file - updated to match The D.A.W.G. App brand kit
 // Importing from design system for consistency
 import { COLORS as DS_COLORS } from './designSystem';
 

@@ -55,7 +55,7 @@ export const CHALLENGES: Challenge[] = [
   // ═══════════════════════════════════════════════════════════
   // PHASE 1 — FOUNDATIONS (Days 1-14)
   // Easy, 2-15 min. Establishing baseline habits.
-  // 8 of 14 require a Raw Dawg session (Easy mode, 3-5 min).
+  // 8 of 14 require a D.A.W.G. session (Easy mode, 3-5 min).
   // ═══════════════════════════════════════════════════════════
 
   {
@@ -308,7 +308,7 @@ export const CHALLENGES: Challenge[] = [
   // ═══════════════════════════════════════════════════════════
   // PHASE 2 — BUILDING (Days 15-45)
   // Moderate, 15-60 min. Deepening the practice.
-  // 12 of 31 require a Raw Dawg session (10-15 min, some Strict).
+  // 12 of 31 require a D.A.W.G. session (10-15 min, some Strict).
   // ═══════════════════════════════════════════════════════════
 
   {
@@ -854,7 +854,7 @@ export const CHALLENGES: Challenge[] = [
   // ═══════════════════════════════════════════════════════════
   // PHASE 3 — MASTERY (Days 46-90)
   // Hard, 30 min to full day. Deep rewiring.
-  // 10 of 45 require a Raw Dawg session (15-20 min, some Ruthless).
+  // 10 of 45 require a D.A.W.G. session (15-20 min, some Ruthless).
   // ═══════════════════════════════════════════════════════════
 
   {

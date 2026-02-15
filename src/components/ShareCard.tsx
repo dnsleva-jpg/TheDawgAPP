@@ -82,9 +82,9 @@ interface ShareCardProps {
 // ─── Component ───────────────────────────────────────────────────────────────
 export const ShareCard = forwardRef<ViewShot, ShareCardProps>(
   ({ scoringResults, completedSeconds, protectionLevel = 'easy', isPro = false }, ref) => {
-    const score = Math.round(scoringResults.rawDawgScore);
+    const score = Math.round(scoringResults.dawgScore);
     const baseGrade = scoringResults.grade;
-    const displayGrade = getGradeWithModifier(scoringResults.rawDawgScore, baseGrade);
+    const displayGrade = getGradeWithModifier(scoringResults.dawgScore, baseGrade);
     const color = gradeColor(baseGrade);
     const label = scoringResults.label;
 
@@ -105,7 +105,7 @@ export const ShareCard = forwardRef<ViewShot, ShareCardProps>(
         >
           {/* 1. TOP — Branding */}
           <View style={styles.topSection}>
-            <Text style={styles.brandName}>The RAW DAWG App</Text>
+            <Text style={styles.brandName}>The D.A.W.G. App</Text>
             <View style={styles.verifiedBadge}>
               <Text style={styles.verifiedDot}>●</Text>
               <Text style={styles.verifiedText}>CAMERA VERIFIED</Text>
@@ -153,13 +153,13 @@ export const ShareCard = forwardRef<ViewShot, ShareCardProps>(
           {/* 6. BOTTOM — Handle + tagline */}
           <View style={styles.bottomSection}>
             <View style={styles.divider} />
-            <Text style={styles.handle}>@TheRAWDAWGapp</Text>
+            <Text style={styles.handle}>@TheDAWGApp</Text>
             <Text style={styles.tagline}>the art of doing absolutely nothing</Text>
           </View>
 
           {/* FREE: subtle watermark */}
           {!isPro && (
-            <Text style={styles.watermark}>rawdawg.app</Text>
+            <Text style={styles.watermark}>dawg.app</Text>
           )}
         </LinearGradient>
       </ViewShot>

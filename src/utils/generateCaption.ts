@@ -8,11 +8,11 @@ export function generateCaption(durationSeconds: number): string {
   const durationText = formatDurationText(durationSeconds);
   
   const captions = [
-    `Just raw dawgged ${durationText} of pure nothing 🐕\n\nNo phone. No distractions. Just existing.\n\n#RawDawg #Mindfulness #DigitalDetox #MentalHealth`,
-    `${durationText} of doing absolutely nothing 🧘‍♂️\n\nTried it. Highly recommend.\n\n#RawDawg #Meditation #SelfCare #Unplugged`,
-    `POV: You raw dawgged ${durationText} 🐕\n\nPhone down. Mind clear. Vibes immaculate.\n\n#RawDawg #MindfulLiving #PresentMoment #InnerPeace`,
-    `Challenge accepted: ${durationText} of nothing ✨\n\nHarder than it looks. Worth it.\n\n#RawDawg #Mindfulness #Challenge #MentalWellness`,
-    `Raw dawgged ${durationText} and felt ✨everything✨\n\nNo scroll. No stimulation. Pure presence.\n\n#RawDawg #Mindfulness #SelfCare #DigitalDetox`,
+    `Just DAWG'd ${durationText} of pure nothing 🐕\n\nNo phone. No distractions. Just existing.\n\n#DAWG #Mindfulness #DigitalDetox #MentalHealth`,
+    `${durationText} of doing absolutely nothing 🧘‍♂️\n\nTried it. Highly recommend.\n\n#DAWG #Meditation #SelfCare #Unplugged`,
+    `POV: You DAWG'd ${durationText} 🐕\n\nPhone down. Mind clear. Vibes immaculate.\n\n#DAWG #MindfulLiving #PresentMoment #InnerPeace`,
+    `Challenge accepted: ${durationText} of nothing ✨\n\nHarder than it looks. Worth it.\n\n#DAWG #Mindfulness #Challenge #MentalWellness`,
+    `DAWG'd ${durationText} and felt ✨everything✨\n\nNo scroll. No stimulation. Pure presence.\n\n#DAWG #Mindfulness #SelfCare #DigitalDetox`,
   ];
   
   const randomCaption = captions[Math.floor(Math.random() * captions.length)];

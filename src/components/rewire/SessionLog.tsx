@@ -26,14 +26,14 @@ function formatDuration(sec: number): string {
 function SessionRow({ session }: { session: Session }) {
   const d = new Date(session.timestamp);
   const dateStr = `${d.getMonth() + 1}/${d.getDate()}`;
-  const hasScore = session.rawDawgScore != null;
+  const hasScore = session.dawgScore != null;
 
   return (
     <View style={styles.row}>
       <Text style={styles.rowDate}>{dateStr}</Text>
       {hasScore ? (
         <Text style={[styles.rowScore, { color: gradeColor(session.grade ?? '') }]}>
-          {Math.round(session.rawDawgScore!)} {session.grade}
+          {Math.round(session.dawgScore!)} {session.grade}
         </Text>
       ) : (
         <Text style={styles.rowNoScore}>—</Text>

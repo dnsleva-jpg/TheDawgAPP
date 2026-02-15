@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const PRO_KEY = 'rawdawg_pro';
+const PRO_KEY = 'dawg_pro';
 
 /**
  * Check if the user has Pro status.

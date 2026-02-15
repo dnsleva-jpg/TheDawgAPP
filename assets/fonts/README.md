@@ -1,4 +1,4 @@
-# Custom Fonts for The Raw Dawg App
+# Custom Fonts for The D.A.W.G. App
 
 ## Required Font Files
 

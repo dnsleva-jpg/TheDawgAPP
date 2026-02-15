@@ -16,8 +16,7 @@ import { Session } from '../types';
 import { getSessions } from '../utils/storage';
 import { getStreakData, StreakData } from '../utils/streakManager';
 import { getDateString } from '../utils/stats';
-import { getIsProUser } from '../utils/proManager';
-import { PaywallModal } from '../components/PaywallModal';
+
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -124,37 +123,34 @@ export function StatsScreen({ onGoBack }: StatsScreenProps) {
     longestStreak: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [isPro, setIsPro] = useState(false);
-  const [showPaywall, setShowPaywall] = useState(false);
+  const isPro = true; // Pro features unlocked for all users (IAP coming later)
+  const openPaywall = () => {}; // No-op — paywall disabled
 
   useEffect(() => {
     (async () => {
       try {
-        const [allSessions, streak, pro] = await Promise.all([
+        const [allSessions, streak] = await Promise.all([
           getSessions(),
           getStreakData(),
-          getIsProUser(),
         ]);
         setSessions(allSessions.filter(s => s.completed));
         setStreakData(streak);
-        setIsPro(pro);
       } catch (_) {}
       setLoading(false);
     })();
   }, []);
 
-  const openPaywall = () => setShowPaywall(true);
 
   // ─── Derived data ─────────────────────────────────────────────────────────
   const scoredSessions = useMemo(
-    () => sessions.filter(s => s.rawDawgScore != null).sort((a, b) => a.timestamp - b.timestamp),
+    () => sessions.filter(s => s.dawgScore != null).sort((a, b) => a.timestamp - b.timestamp),
     [sessions],
   );
 
   const bestSession = useMemo(() => {
     if (scoredSessions.length === 0) return null;
     return scoredSessions.reduce((best, s) =>
-      (s.rawDawgScore || 0) > (best.rawDawgScore || 0) ? s : best
+      (s.dawgScore || 0) > (best.dawgScore || 0) ? s : best
     );
   }, [scoredSessions]);
 
@@ -163,7 +159,7 @@ export function StatsScreen({ onGoBack }: StatsScreenProps) {
     const recent = scoredSessions.filter(s => s.timestamp >= sevenDaysAgo);
     if (recent.length === 0) return null;
     return Math.round(
-      recent.reduce((sum, s) => sum + (s.rawDawgScore || 0), 0) / recent.length
+      recent.reduce((sum, s) => sum + (s.dawgScore || 0), 0) / recent.length
     );
   }, [scoredSessions]);
 
@@ -176,7 +172,7 @@ export function StatsScreen({ onGoBack }: StatsScreenProps) {
     return chartSessions.map((_, i) => {
       const start = Math.max(0, i - 2);
       const win = chartSessions.slice(start, i + 1);
-      return win.reduce((s, sess) => s + (sess.rawDawgScore || 0), 0) / win.length;
+      return win.reduce((s, sess) => s + (sess.dawgScore || 0), 0) / win.length;
     });
   }, [chartSessions]);
 
@@ -190,8 +186,8 @@ export function StatsScreen({ onGoBack }: StatsScreenProps) {
 
     if (thisWeek.length === 0 || lastWeek.length === 0) return null;
 
-    const thisAvg = Math.round(thisWeek.reduce((s, sess) => s + (sess.rawDawgScore || 0), 0) / thisWeek.length);
-    const lastAvg = Math.round(lastWeek.reduce((s, sess) => s + (sess.rawDawgScore || 0), 0) / lastWeek.length);
+    const thisAvg = Math.round(thisWeek.reduce((s, sess) => s + (sess.dawgScore || 0), 0) / thisWeek.length);
+    const lastAvg = Math.round(lastWeek.reduce((s, sess) => s + (sess.dawgScore || 0), 0) / lastWeek.length);
     const change = lastAvg > 0 ? Math.round(((thisAvg - lastAvg) / lastAvg) * 100) : 0;
 
     return { thisAvg, lastAvg, change };
@@ -305,8 +301,8 @@ export function StatsScreen({ onGoBack }: StatsScreenProps) {
         {/* Main score line */}
         {chartSessions.map((sess, i) => {
           if (i === 0) return null;
-          const score = sess.rawDawgScore || 0;
-          const prevScore = chartSessions[i - 1].rawDawgScore || 0;
+          const score = sess.dawgScore || 0;
+          const prevScore = chartSessions[i - 1].dawgScore || 0;
           const x1 = CHART_PADDING_LEFT + (i - 1) * pointSpacing;
           const y1 = scoreToY(prevScore);
           const x2 = CHART_PADDING_LEFT + i * pointSpacing;
@@ -318,7 +314,7 @@ export function StatsScreen({ onGoBack }: StatsScreenProps) {
 
         {/* Score dots */}
         {chartSessions.map((sess, i) => {
-          const score = sess.rawDawgScore || 0;
+          const score = sess.dawgScore || 0;
           const x = CHART_PADDING_LEFT + i * pointSpacing;
           const y = scoreToY(score);
           return (
@@ -418,11 +414,11 @@ export function StatsScreen({ onGoBack }: StatsScreenProps) {
             <Text style={styles.summaryLabel}>BEST</Text>
             {bestSession ? (
               <>
-                <Text style={[styles.summaryValue, { color: scoreColor(bestSession.rawDawgScore || 0) }]}>
-                  {Math.round(bestSession.rawDawgScore || 0)}
+                <Text style={[styles.summaryValue, { color: scoreColor(bestSession.dawgScore || 0) }]}>
+                  {Math.round(bestSession.dawgScore || 0)}
                 </Text>
-                <Text style={[styles.summaryGrade, { color: scoreColor(bestSession.rawDawgScore || 0) }]}>
-                  {getGradeWithModifier(bestSession.rawDawgScore || 0, bestSession.grade || 'F')}
+                <Text style={[styles.summaryGrade, { color: scoreColor(bestSession.dawgScore || 0) }]}>
+                  {getGradeWithModifier(bestSession.dawgScore || 0, bestSession.grade || 'F')}
                 </Text>
               </>
             ) : (
@@ -618,15 +614,6 @@ export function StatsScreen({ onGoBack }: StatsScreenProps) {
         <View style={{ height: 40 }} />
       </ScrollView>
 
-      {/* ─── Paywall Modal ─────────────────────────────────────────── */}
-      <PaywallModal
-        visible={showPaywall}
-        onDismiss={() => setShowPaywall(false)}
-        onProActivated={() => {
-          setIsPro(true);
-          setShowPaywall(false);
-        }}
-      />
     </SafeAreaView>
   );
 }
@@ -635,8 +622,8 @@ export function StatsScreen({ onGoBack }: StatsScreenProps) {
 function SessionRow({ session, showBorder }: { session: Session; showBorder: boolean }) {
   const dateObj = new Date(session.timestamp);
   const dateLabel = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  const hasScore = session.rawDawgScore != null;
-  const score = session.rawDawgScore || 0;
+  const hasScore = session.dawgScore != null;
+  const score = session.dawgScore || 0;
   const grade = session.grade || 'F';
   const protection = session.protectionLevel;
 

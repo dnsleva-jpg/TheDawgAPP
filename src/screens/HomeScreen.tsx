@@ -72,7 +72,7 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
           {/* Gradient Title */}
           <MaskedView
             maskElement={
-              <Text style={styles.title} accessibilityRole="header">THE RAW DAWG APP</Text>
+              <Text style={styles.title} accessibilityRole="header">THE D.A.W.G. APP</Text>
             }
           >
             <LinearGradient
@@ -80,7 +80,7 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
               start={{ x: 0, y: 0 }}
               end={{ x: 0, y: 1 }}
             >
-              <Text style={[styles.title, { opacity: 0 }]}>THE RAW DAWG APP</Text>
+              <Text style={[styles.title, { opacity: 0 }]}>THE D.A.W.G. APP</Text>
             </LinearGradient>
           </MaskedView>
           

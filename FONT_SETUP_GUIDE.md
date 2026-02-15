@@ -75,7 +75,7 @@ assets/fonts/
    ```
 
 2. **Reload the app**
-   - You should see a loading screen: "RAW DAWG" with "Loading fonts..."
+   - You should see a loading screen: "D.A.W.G." with "Loading fonts..."
    - It should load for ~1-2 seconds, then show the home screen
 
 3. **If fonts fail to load:**

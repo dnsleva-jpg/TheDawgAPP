@@ -305,7 +305,7 @@ export function TimerScreen({
     const scoringResults = scoringEngineRef.current?.getSessionResults(durationMinutes, committedSeconds);
 
     // #region agent log — H-D: session results at completion
-    console.log(`[DBG-D] COMPLETE dur=${durationMinutes.toFixed(2)}min committed=${committedSeconds ?? 'N/A'}s rogue=${rogue} calibrated=${isEngineCalibrated.current} engineBlinks=${scoringResults?.blinksPerMinute ?? 'N/A'} hookBlinks=${faceResults.totalBlinks} stillness=${scoringResults?.stillnessPercent ?? 'N/A'} grade=${scoringResults?.grade ?? 'N/A'} score=${scoringResults?.rawDawgScore ?? 'N/A'} durScore=${scoringResults?.durationScore ?? 'N/A'}`);
+    console.log(`[DBG-D] COMPLETE dur=${durationMinutes.toFixed(2)}min committed=${committedSeconds ?? 'N/A'}s rogue=${rogue} calibrated=${isEngineCalibrated.current} engineBlinks=${scoringResults?.blinksPerMinute ?? 'N/A'} hookBlinks=${faceResults.totalBlinks} stillness=${scoringResults?.stillnessPercent ?? 'N/A'} grade=${scoringResults?.grade ?? 'N/A'} score=${scoringResults?.dawgScore ?? 'N/A'} durScore=${scoringResults?.durationScore ?? 'N/A'}`);
     // #endregion
 
     onComplete(
@@ -548,14 +548,14 @@ export function TimerScreen({
             {/* Stats Bar */}
             <View style={styles.statsBar}>
               <Text style={styles.sessionText}>
-                I Raw Dawg'd for {formatTimeDisplay(isRogueMode ? timeRemaining : durationSeconds - timeRemaining)}
+                I DAWG'd for {formatTimeDisplay(isRogueMode ? timeRemaining : durationSeconds - timeRemaining)}
               </Text>
               <View style={styles.statsRow}>
                 <Text style={styles.statsText}>🐕 {liveStats.stillness}% still</Text>
                 <Text style={styles.statsDivider}>•</Text>
                 <Text style={styles.statsText}>{liveStats.blinks} blinks</Text>
               </View>
-              <Text style={styles.handleText}>@TheRAWDAWGapp</Text>
+              <Text style={styles.handleText}>@TheDAWGApp</Text>
             </View>
 
             {/* Bottom Section - Controls */}

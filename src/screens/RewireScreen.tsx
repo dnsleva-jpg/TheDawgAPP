@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS as DS_COLORS, FONTS, RADIUS } from '../constants/designSystem';
 import { getSessions } from '../utils/storage';
 import { getStreakData, StreakData } from '../utils/streakManager';
-import { getIsProUser } from '../utils/proManager';
 import {
   ensureStartDate,
   getRewireDay,
@@ -26,18 +25,6 @@ import { ChallengesSection } from '../components/rewire/ChallengesSection';
 import { ScienceCards } from '../components/rewire/ScienceCards';
 import { SessionLog } from '../components/rewire/SessionLog';
 import { SourcesModal } from '../components/rewire/SourcesModal';
-import { PaywallModal } from '../components/PaywallModal';
-
-const REWIRE_PAYWALL_FEATURES = [
-  'See exactly how your brain compares to everyone else',
-  'Track whether your focus, stillness, and endurance are improving',
-  'Full score history and focus trajectory',
-  'Best streak and 30-day rewire calendar',
-  'Unlock Ruthless Mode — no escape once you start',
-  'Harder challenges that push your limits',
-  'Watermark-free share cards',
-  'Everything we build next',
-];
 
 export function RewireScreen() {
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -46,9 +33,8 @@ export function RewireScreen() {
     lastSessionDate: null,
     longestStreak: 0,
   });
-  const [isPro, setIsPro] = useState(false);
+  const isPro = true; // Pro features unlocked for all users (IAP coming later)
   const [startDate, setStartDateState] = useState<string>('');
-  const [showPaywall, setShowPaywall] = useState(false);
   const [showSources, setShowSources] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -58,15 +44,13 @@ export function RewireScreen() {
 
   const loadData = async () => {
     try {
-      const [sess, streak, pro] = await Promise.all([
+      const [sess, streak] = await Promise.all([
         getSessions(),
         getStreakData(),
-        getIsProUser(),
       ]);
       const start = await ensureStartDate(sess);
       setSessions(sess);
       setStreakData(streak);
-      setIsPro(pro);
       setStartDateState(start);
     } catch {
       // Defaults remain
@@ -76,12 +60,13 @@ export function RewireScreen() {
   };
 
   const scrollViewRef = useRef<ScrollView>(null);
-  const openPaywall = useCallback(() => setShowPaywall(true), []);
+  const openPaywall = useCallback(() => {}, []); // No-op — paywall disabled
 
   const handleTimelineScrollOffset = useCallback((y: number) => {
-    // Small delay to ensure the ScrollView has rendered
+    // Center today's node vertically on screen
+    const halfScreen = Dimensions.get('window').height / 2;
     setTimeout(() => {
-      scrollViewRef.current?.scrollTo({ y: Math.max(0, y), animated: true });
+      scrollViewRef.current?.scrollTo({ y: Math.max(0, y - halfScreen), animated: true });
     }, 100);
   }, []);
 
@@ -196,15 +181,13 @@ export function RewireScreen() {
           >
             <Text style={styles.sourcesLink}>View Sources</Text>
           </TouchableOpacity>
+          <Text style={styles.disclaimer}>
+            For educational purposes only. Not medical advice. Consult a healthcare professional for medical concerns.
+          </Text>
         </View>
       </ScrollView>
 
       {/* ─── Modals ────────────────────────────────────────── */}
-      <PaywallModal
-        visible={showPaywall}
-        onDismiss={() => setShowPaywall(false)}
-        features={REWIRE_PAYWALL_FEATURES}
-      />
       <SourcesModal
         visible={showSources}
         onDismiss={() => setShowSources(false)}
@@ -282,5 +265,14 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.bodyMedium,
     color: DS_COLORS.coral,
     textDecorationLine: 'underline',
+  },
+  disclaimer: {
+    fontSize: 11,
+    fontFamily: FONTS.body,
+    color: 'rgba(255,255,255,0.25)',
+    textAlign: 'center',
+    marginTop: 16,
+    lineHeight: 16,
+    paddingHorizontal: 20,
   },
 });

@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Session } from '../types';
 import type { StreakData } from './streakManager';
 
-const CHALLENGES_KEY = 'rawdawg_challenges';
+const CHALLENGES_KEY = 'dawg_challenges';
 
 // ─── Types ────────────────────────────────────────────────
 
@@ -134,7 +134,7 @@ function computeProgress(
   sessions: Session[],
   streakData: StreakData
 ): number {
-  const scored = sessions.filter((s) => s.rawDawgScore != null);
+  const scored = sessions.filter((s) => s.dawgScore != null);
 
   switch (def.id) {
     case 'survive_withdrawal': {

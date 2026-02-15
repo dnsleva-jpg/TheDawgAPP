@@ -1,2 +1,2 @@
-# TheRawDawgAPP
-Raw dawg life with the RAW DAWG APP
+# TheDAWGApp
+DAWG life with The D.A.W.G. App

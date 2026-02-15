@@ -5,7 +5,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Session } from '../types';
 
-const SESSIONS_KEY = '@raw_dawg_sessions';
+const SESSIONS_KEY = '@dawg_sessions';
 
 /**
  * Save a completed session to storage

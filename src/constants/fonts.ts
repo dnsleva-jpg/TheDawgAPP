@@ -1,5 +1,5 @@
 /**
- * The Raw Dawg App - Custom Font Definitions
+ * The D.A.W.G. App - Custom Font Definitions
  * 
  * Font Usage Guide:
  * - display: Bebas Neue - for app title, timer, big numbers only

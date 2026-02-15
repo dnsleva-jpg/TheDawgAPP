@@ -25,9 +25,7 @@ import { getSessions } from '../utils/storage';
 import { calculateStats, formatTotalTime } from '../utils/stats';
 import { saveVideoToPhotos } from '../utils/videoProcessor';
 import { ShareCard } from '../components/ShareCard';
-import { PaywallModal } from '../components/PaywallModal';
 import type { SessionResults } from '../scoring/scoringEngine';
-import { getIsProUser } from '../utils/proManager';
 
 import type { ProtectionLevel } from './PrepareScreen';
 
@@ -90,12 +88,10 @@ export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0
     longestSessionSeconds: 0,
     currentStreak: 0,
   });
-  const [isPro, setIsPro] = useState(false);
-  const [showPaywall, setShowPaywall] = useState(false);
+  const isPro = true; // Pro features unlocked for all users (IAP coming later)
 
   useEffect(() => {
     loadStats();
-    getIsProUser().then(setIsPro).catch(() => {});
   }, []);
 
   const loadStats = async () => {
@@ -134,7 +130,7 @@ export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0
     try {
       const uri = await captureShareCard();
       if (uri && (await Sharing.isAvailableAsync())) {
-        await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: 'Share your Raw Dawg score' });
+        await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: 'Share your DAWG Score' });
       }
     } catch (error: any) {
       Alert.alert('Share Failed', error?.message ?? 'Could not share the card.');
@@ -190,7 +186,7 @@ export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0
   };
 
   const getCaption = () => {
-    return `I just Raw Dawg'd ${selectedLocation} 🐕 @TheRAWDAWGapp #rawdawg #dopaminedetox`;
+    return `I just DAWG'd ${selectedLocation} 🐕 @TheDAWGApp #dawg #dopaminedetox`;
   };
 
   const [captionCopied, setCaptionCopied] = useState(false);
@@ -357,7 +353,7 @@ export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0
 
   // Motivational copy — pick once on mount so it doesn't change on re-render
   const motivationalCopy = useMemo(() => {
-    const score = scoringResults?.rawDawgScore ?? 0;
+    const score = scoringResults?.dawgScore ?? 0;
     const high = ['Locked in.', 'Built different.', 'Monk mode activated.'];
     const mid = ['Getting there.', 'Room to grow.', 'Solid foundation.'];
     const low = ['Everyone starts somewhere.', 'Come back tomorrow.', 'The score doesn\'t lie.'];
@@ -428,12 +424,12 @@ export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0
               <Text style={styles.title}>SESSION COMPLETE</Text>
             </View>
 
-            {/* 2. Hero Raw Dawg Score */}
+            {/* 2. Hero DAWG Score */}
             <View style={styles.heroContainer}>
               <View style={styles.heroScoreRow}>
-                <Text style={styles.heroScore}>{Math.round(scoringResults.rawDawgScore)}</Text>
+                <Text style={styles.heroScore}>{Math.round(scoringResults.dawgScore)}</Text>
                 <Text style={[styles.heroGrade, { color: scoringResults.color }]}>
-                  {getGradeWithModifier(scoringResults.rawDawgScore, scoringResults.grade)}
+                  {getGradeWithModifier(scoringResults.dawgScore, scoringResults.grade)}
                 </Text>
               </View>
               <Text style={[styles.heroGradeLabel, { color: scoringResults.color }]}>
@@ -526,11 +522,11 @@ export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0
                 <View style={styles.miniStatCard}>
                   <Text style={styles.miniStatEmoji}>🏆</Text>
                   <View style={styles.miniStatScoreRow}>
-                    <Text style={[styles.miniStatValue, { color: scoreColor(stats.bestRawDawgScore ?? 0) }]}>
-                      {Math.round(stats.bestRawDawgScore ?? 0)}
+                    <Text style={[styles.miniStatValue, { color: scoreColor(stats.bestDawgScore ?? 0) }]}>
+                      {Math.round(stats.bestDawgScore ?? 0)}
                     </Text>
                     {stats.bestGrade && (
-                      <Text style={[styles.miniStatGrade, { color: scoreColor(stats.bestRawDawgScore ?? 0) }]}>
+                      <Text style={[styles.miniStatGrade, { color: scoreColor(stats.bestDawgScore ?? 0) }]}>
                         {stats.bestGrade}
                       </Text>
                     )}
@@ -541,17 +537,19 @@ export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0
                 {isPro ? (
                   <View style={styles.miniStatCard}>
                     <Text style={styles.miniStatEmoji}>⌀</Text>
-                    <Text style={[styles.miniStatValue, { color: scoreColor(stats.avgRawDawgScore7d ?? 0) }]}>
-                      {stats.avgRawDawgScore7d != null ? Math.round(stats.avgRawDawgScore7d) : '—'}
+                    <Text style={[styles.miniStatValue, { color: scoreColor(stats.avgDawgScore7d ?? 0) }]}>
+                      {stats.avgDawgScore7d != null ? Math.round(stats.avgDawgScore7d) : '—'}
                     </Text>
                     <Text style={styles.miniStatLabel}>Avg 7d</Text>
                   </View>
                 ) : (
-                  <TouchableOpacity style={styles.miniStatCard} onPress={() => setShowPaywall(true)} activeOpacity={0.7}>
-                    <Text style={styles.miniStatEmoji}>🔒</Text>
-                    <Text style={[styles.miniStatValue, { color: DS_COLORS.coral, fontSize: 10 }]}>PRO</Text>
+                  <View style={styles.miniStatCard}>
+                    <Text style={styles.miniStatEmoji}>⌀</Text>
+                    <Text style={[styles.miniStatValue, { color: scoreColor(stats.avgDawgScore7d ?? 0) }]}>
+                      {stats.avgDawgScore7d != null ? Math.round(stats.avgDawgScore7d) : '—'}
+                    </Text>
                     <Text style={styles.miniStatLabel}>Avg 7d</Text>
-                  </TouchableOpacity>
+                  </View>
                 )}
 
                 <View style={styles.miniStatCard}>
@@ -663,7 +661,7 @@ export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Where did you Raw Dawg? 🐕</Text>
+            <Text style={styles.modalTitle}>Where did you DAWG? 🐕</Text>
             
             <ScrollView style={styles.locationsList} showsVerticalScrollIndicator={false}>
               {selectedLocation === 'custom' ? (
@@ -875,12 +873,6 @@ export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0
         </View>
       </Modal>
 
-      {/* Paywall Modal (for pro-gated stats) */}
-      <PaywallModal
-        visible={showPaywall}
-        onDismiss={() => setShowPaywall(false)}
-        onProActivated={() => { setIsPro(true); setShowPaywall(false); }}
-      />
     </SafeAreaView>
   );
 }
@@ -914,7 +906,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
 
-  // ─── 2. Hero Raw Dawg Score ────────────────────────────────────────
+  // ─── 2. Hero DAWG Score ────────────────────────────────────────
   heroContainer: {
     alignItems: 'center',
     gap: 2,
