@@ -198,12 +198,7 @@ export function PrepareScreen({
         Alert.alert('Not Available', 'Ruthless Mode cannot be used with Rogue Mode (infinite timer).');
         return;
       }
-      Alert.alert(
-        'D.A.W.G. Pro',
-        'Ruthless Mode requires D.A.W.G. Pro — $4.99/month.\n\nComing soon!',
-        [{ text: 'OK' }]
-      );
-      return;
+      // Ruthless Mode unlocked for all users (Pro IAP coming later)
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setProtectionLevel(level);
