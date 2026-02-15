@@ -220,13 +220,16 @@ export function getCalendarDayNumber(startDate: string): number {
 /**
  * Build an array of 90 day statuses for the timeline.
  * Each entry describes whether the user completed, missed, is currently on, or hasn't reached that day.
+ * @param manuallyCompleted - day numbers marked complete via "MARK COMPLETE" (non-session challenges)
  */
 export function getTimelineDayStatuses(
   sessions: Session[],
-  startDate: string
+  startDate: string,
+  manuallyCompleted: number[] = []
 ): TimelineDayStatus[] {
   const today = getTodayDateString();
   const calendarDay = getCalendarDayNumber(startDate);
+  const manualSet = new Set(manuallyCompleted);
 
   // Build a set of dates that have at least one completed session
   const sessionDates = new Set<string>();
@@ -243,11 +246,15 @@ export function getTimelineDayStatuses(
     const d = new Date(dateMs);
     const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
+    const hasSession = sessionDates.has(dateStr);
+    const hasManual = manualSet.has(dayNumber);
+    const isDone = hasSession || hasManual;
+
     let status: DayStatus;
     if (dateStr === today) {
-      status = sessionDates.has(dateStr) ? 'currentCompleted' : 'current';
+      status = isDone ? 'currentCompleted' : 'current';
     } else if (dayNumber < calendarDay) {
-      status = sessionDates.has(dateStr) ? 'completed' : 'missed';
+      status = isDone ? 'completed' : 'missed';
     } else {
       status = 'future';
     }
@@ -256,6 +263,39 @@ export function getTimelineDayStatuses(
   }
 
   return result;
+}
+
+// ─── Daily Challenge Completion ───────────────────────────
+
+const DAILY_CHALLENGES_KEY = 'rawdawg_daily_challenges';
+
+/**
+ * Get the list of day numbers whose daily challenges have been manually marked complete.
+ * (Session-based challenges are tracked via session dates; this covers requiresSession=false.)
+ */
+export async function getCompletedDailyChallenges(): Promise<number[]> {
+  try {
+    const data = await AsyncStorage.getItem(DAILY_CHALLENGES_KEY);
+    if (data) return JSON.parse(data);
+  } catch {
+    // fall through
+  }
+  return [];
+}
+
+/**
+ * Mark a daily challenge as complete (for non-session challenges).
+ */
+export async function markDailyChallengeComplete(dayNumber: number): Promise<void> {
+  try {
+    const current = await getCompletedDailyChallenges();
+    if (!current.includes(dayNumber)) {
+      current.push(dayNumber);
+      await AsyncStorage.setItem(DAILY_CHALLENGES_KEY, JSON.stringify(current));
+    }
+  } catch {
+    // Silently fail
+  }
 }
 
 // ─── Milestone Celebrations ───────────────────────────────

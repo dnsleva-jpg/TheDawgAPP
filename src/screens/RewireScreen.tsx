@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS as DS_COLORS, FONTS, RADIUS } from '../constants/designSystem';
@@ -79,9 +79,10 @@ export function RewireScreen() {
   const openPaywall = useCallback(() => setShowPaywall(true), []);
 
   const handleTimelineScrollOffset = useCallback((y: number) => {
-    // Small delay to ensure the ScrollView has rendered
+    // Center today's node vertically on screen
+    const halfScreen = Dimensions.get('window').height / 2;
     setTimeout(() => {
-      scrollViewRef.current?.scrollTo({ y: Math.max(0, y), animated: true });
+      scrollViewRef.current?.scrollTo({ y: Math.max(0, y - halfScreen), animated: true });
     }, 100);
   }, []);
 
