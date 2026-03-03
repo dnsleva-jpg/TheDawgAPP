@@ -1,6 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { View, Text, StyleSheet } from 'react-native';
 import { COLORS as DS_COLORS, FONTS, RADIUS } from '../../constants/designSystem';
 import type { Session } from '../../types';
 
@@ -44,8 +43,7 @@ export function FocusTrajectory({ sessions, isPro, onLockPress }: Props) {
     );
   }
 
-  const visibleCount = isPro ? scoredSessions.length : Math.min(3, scoredSessions.length);
-  const showBlur = !isPro && scoredSessions.length > 3;
+  const visibleCount = scoredSessions.length;
   const chartWidth = 300; // approx usable width
   const spacing = scoredSessions.length > 1 ? chartWidth / (scoredSessions.length - 1) : chartWidth;
 
@@ -84,14 +82,12 @@ export function FocusTrajectory({ sessions, isPro, onLockPress }: Props) {
             return (
               <View key={s.id}>
                 {/* Rolling average dot */}
-                {isPro && (
-                  <View
-                    style={[
-                      styles.avgDot,
-                      { left: x + CHART_PADDING - 3, top: scoreToY(rollingAvg[i]) - 3 },
-                    ]}
-                  />
-                )}
+                <View
+                  style={[
+                    styles.avgDot,
+                    { left: x + CHART_PADDING - 3, top: scoreToY(rollingAvg[i]) - 3 },
+                  ]}
+                />
                 {/* Score dot */}
                 <View
                   style={[
@@ -149,23 +145,6 @@ export function FocusTrajectory({ sessions, isPro, onLockPress }: Props) {
           })}
         </View>
 
-        {/* Blur overlay for free users */}
-        {showBlur && (
-          <TouchableOpacity
-            style={styles.blurOverlay}
-            onPress={onLockPress}
-            activeOpacity={0.8}
-          >
-            <LinearGradient
-              colors={['transparent', 'rgba(26, 26, 46, 0.95)']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={StyleSheet.absoluteFill}
-            />
-            <Text style={styles.lockIcon}>🔒</Text>
-            <Text style={styles.lockText}>See where your focus is heading</Text>
-          </TouchableOpacity>
-        )}
       </View>
     </View>
   );
@@ -247,24 +226,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: FONTS.body,
     color: DS_COLORS.textMuted,
-  },
-  blurOverlay: {
-    position: 'absolute',
-    right: 0,
-    top: 0,
-    bottom: 0,
-    width: '55%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  lockIcon: {
-    fontSize: 24,
-  },
-  lockText: {
-    fontSize: 12,
-    fontFamily: FONTS.bodyMedium,
-    color: DS_COLORS.textPrimary,
-    textAlign: 'center',
   },
 });

@@ -261,10 +261,10 @@ export function SelfieScreen({
       <View style={styles.coralDivider} />
 
       {/* Handle */}
-      <Text style={styles.handleText}>THE D.A.W.G. APP</Text>
+      <Text style={styles.handleText}>DO NOTHIN.</Text>
       
       {/* Tagline */}
-      <Text style={styles.taglineText}>the art of doing absolutely nothing</Text>
+      <Text style={styles.taglineText}>Own Your Attention</Text>
     </View>
   );
 

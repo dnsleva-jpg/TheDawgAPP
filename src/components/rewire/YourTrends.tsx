@@ -1,6 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { View, Text, StyleSheet } from 'react-native';
 import { COLORS as DS_COLORS, FONTS, RADIUS } from '../../constants/designSystem';
 import type { TrendData, TrendItem } from '../../utils/rewireManager';
 
@@ -49,45 +48,18 @@ export function YourTrends({ trends, isPro, onLockPress }: Props) {
     <View style={styles.container}>
       <Text style={styles.header}>YOUR TRENDS</Text>
       <View style={styles.card}>
-        {isPro && trends.hasEnoughData ? (
+        {trends.hasEnoughData ? (
           <View style={styles.trendsColumn}>
             <TrendCard item={trends.stillness} />
             <TrendCard item={trends.focus} />
             <TrendCard item={trends.endurance} />
           </View>
-        ) : isPro && !trends.hasEnoughData ? (
+        ) : (
           <View style={styles.placeholderWrap}>
             <Text style={styles.placeholderText}>
               Need more sessions to see trends
             </Text>
           </View>
-        ) : (
-          <>
-            {/* Placeholder behind blur */}
-            <View style={styles.placeholderCards}>
-              {[1, 2, 3].map((i) => (
-                <View key={i} style={[styles.trendCard, { opacity: 0.3 }]}>
-                  <View style={styles.trendHeader}>
-                    <View style={styles.fakeBar} />
-                    <View style={[styles.fakeBar, { width: 40 }]} />
-                  </View>
-                  <View style={[styles.fakeBar, { width: '60%' }]} />
-                </View>
-              ))}
-            </View>
-            <TouchableOpacity
-              style={styles.lockOverlay}
-              onPress={onLockPress}
-              activeOpacity={0.8}
-            >
-              <LinearGradient
-                colors={['transparent', 'rgba(26, 26, 46, 0.95)']}
-                style={StyleSheet.absoluteFill}
-              />
-              <Text style={styles.lockIcon}>🔒</Text>
-              <Text style={styles.lockText}>See if your brain is improving</Text>
-            </TouchableOpacity>
-          </>
         )}
       </View>
     </View>
@@ -148,29 +120,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: FONTS.body,
     color: DS_COLORS.textMuted,
-  },
-  placeholderCards: {
-    gap: 10,
-  },
-  fakeBar: {
-    height: 10,
-    width: 80,
-    borderRadius: 5,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-  },
-  lockOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  lockIcon: {
-    fontSize: 28,
-  },
-  lockText: {
-    fontSize: 13,
-    fontFamily: FONTS.bodyMedium,
-    color: DS_COLORS.textPrimary,
-    textAlign: 'center',
   },
 });

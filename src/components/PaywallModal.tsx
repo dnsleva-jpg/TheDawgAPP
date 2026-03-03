@@ -69,7 +69,7 @@ export function PaywallModal({ visible, onDismiss, onProActivated, features }: P
           <Text style={styles.heroEmoji}>🐕</Text>
 
           {/* Title */}
-          <Text style={styles.title}>D.A.W.G. PRO</Text>
+          <Text style={styles.title}>DO NOTHIN. PRO</Text>
           <Text style={styles.subtitle}>Unlock the full experience</Text>
 
           {/* Feature list */}
@@ -90,7 +90,7 @@ export function PaywallModal({ visible, onDismiss, onProActivated, features }: P
               onPress={() => handlePriceTap('monthly')}
               activeOpacity={0.8}
             >
-              <Text style={styles.monthlyPrice}>$4.99</Text>
+              <Text style={styles.monthlyPrice}>—</Text>
               <Text style={styles.monthlyPeriod}>/ month</Text>
             </TouchableOpacity>
 
@@ -103,7 +103,7 @@ export function PaywallModal({ visible, onDismiss, onProActivated, features }: P
               <View style={styles.saveBadge}>
                 <Text style={styles.saveBadgeText}>SAVE 50%</Text>
               </View>
-              <Text style={styles.yearlyPrice}>$29.99</Text>
+              <Text style={styles.yearlyPrice}>—</Text>
               <Text style={styles.yearlyPeriod}>/ year</Text>
             </TouchableOpacity>
           </View>

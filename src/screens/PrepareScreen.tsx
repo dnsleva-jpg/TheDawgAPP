@@ -116,7 +116,7 @@ export function PrepareScreen({
           <View style={styles.permissionContainer}>
             <Text style={styles.permissionTitle}>📸 Permissions Required</Text>
             <Text style={styles.permissionText}>
-              The D.A.W.G. App needs camera and photo library access to verify your session and save your results.
+              DO NOTHIN. needs camera and photo library access to verify your session and save your results.
             </Text>
             <Text style={styles.permissionSubtext}>
               Requesting permissions...
@@ -136,7 +136,7 @@ export function PrepareScreen({
           <View style={styles.permissionContainer}>
             <Text style={styles.permissionTitle}>Permissions Required</Text>
             <Text style={styles.permissionText}>
-              D.A.W.G. needs Camera and Photos access to verify your sessions and save your results.
+              DO NOTHIN. needs Camera and Photos access to verify your sessions and save your results.
             </Text>
             <Text style={styles.permissionText}>
               Please enable them in Settings.
@@ -268,6 +268,7 @@ export function PrepareScreen({
             style={[
               styles.protectionCard,
               styles.protectionCardRuthless,
+              protectionLevel === 'ruthless' && styles.protectionCardSelectedRuthless,
             ]}
             onPress={() => handleSelectProtection('ruthless')}
             activeOpacity={0.7}
@@ -276,14 +277,10 @@ export function PrepareScreen({
             <View style={styles.protectionTextContainer}>
               <View style={styles.ruthlessHeader}>
                 <Text style={styles.protectionName}>Ruthless Mode</Text>
-                <View style={styles.proBadge}>
-                  <Text style={styles.proBadgeText}>PRO</Text>
-                </View>
               </View>
               <Text style={styles.protectionSubtitle}>No escape</Text>
               <Text style={styles.protectionDesc}>Give Up is disabled. You MUST finish.</Text>
             </View>
-            <Text style={styles.lockIcon}>🔒</Text>
           </TouchableOpacity>
         </View>
 
@@ -482,6 +479,10 @@ const styles = StyleSheet.create({
   protectionCardSelectedStrict: {
     borderColor: '#F39C12',
     backgroundColor: 'rgba(243, 156, 18, 0.08)',
+  },
+  protectionCardSelectedRuthless: {
+    borderColor: DS_COLORS.coral,
+    backgroundColor: 'rgba(233, 69, 96, 0.12)',
   },
   protectionCardRuthless: {
     borderColor: 'rgba(233, 69, 96, 0.3)',

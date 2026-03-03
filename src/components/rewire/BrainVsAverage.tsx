@@ -1,6 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { View, Text, StyleSheet } from 'react-native';
 import { COLORS as DS_COLORS, FONTS, RADIUS } from '../../constants/designSystem';
 import type { BrainComparison, ComparisonItem } from '../../utils/rewireManager';
 
@@ -41,7 +40,7 @@ export function BrainVsAverage({ data, isPro, onLockPress }: Props) {
     <View style={styles.container}>
       <Text style={styles.header}>YOUR BRAIN VS AVERAGE</Text>
       <View style={styles.card}>
-        {isPro && data.hasData ? (
+        {data.hasData ? (
           <>
             <ComparisonRow item={data.stillness} />
             <View style={styles.divider} />
@@ -50,33 +49,11 @@ export function BrainVsAverage({ data, isPro, onLockPress }: Props) {
             <ComparisonRow item={data.endurance} />
           </>
         ) : (
-          <>
-            {/* Placeholder bars behind the blur */}
-            <View style={styles.placeholderBars}>
-              {[1, 2, 3].map((i) => (
-                <View key={i} style={styles.placeholderRow}>
-                  <View style={[styles.barTrack, { opacity: 0.3 }]}>
-                    <View style={[styles.barFillUser, { width: '65%' }]} />
-                  </View>
-                  <View style={[styles.barTrack, { opacity: 0.2 }]}>
-                    <View style={[styles.barFillBaseline, { width: '50%' }]} />
-                  </View>
-                </View>
-              ))}
-            </View>
-            <TouchableOpacity
-              style={styles.lockOverlay}
-              onPress={onLockPress}
-              activeOpacity={0.8}
-            >
-              <LinearGradient
-                colors={['transparent', 'rgba(26, 26, 46, 0.95)']}
-                style={StyleSheet.absoluteFill}
-              />
-              <Text style={styles.lockIcon}>🔒</Text>
-              <Text style={styles.lockText}>See how your brain compares</Text>
-            </TouchableOpacity>
-          </>
+          <View style={styles.placeholderWrap}>
+            <Text style={styles.placeholderText}>
+              Need more sessions to see how your brain compares
+            </Text>
+          </View>
         )}
       </View>
     </View>
@@ -152,26 +129,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.05)',
     marginVertical: 12,
   },
-  placeholderBars: {
-    gap: 20,
-    opacity: 0.5,
-  },
-  placeholderRow: {
-    gap: 4,
-  },
-  lockOverlay: {
-    ...StyleSheet.absoluteFillObject,
+  placeholderWrap: {
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
+    paddingVertical: 24,
   },
-  lockIcon: {
-    fontSize: 28,
-  },
-  lockText: {
-    fontSize: 13,
-    fontFamily: FONTS.bodyMedium,
-    color: DS_COLORS.textPrimary,
-    textAlign: 'center',
+  placeholderText: {
+    fontSize: 14,
+    fontFamily: FONTS.body,
+    color: DS_COLORS.textMuted,
   },
 });

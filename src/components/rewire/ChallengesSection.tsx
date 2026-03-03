@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { COLORS as DS_COLORS, FONTS, RADIUS } from '../../constants/designSystem';
 import type { EvaluatedChallenge } from '../../utils/challengeManager';
 
@@ -9,21 +9,12 @@ interface Props {
   onLockPress: () => void;
 }
 
-function ChallengeCard({
-  challenge,
-  isPro,
-  onLockPress,
-}: {
-  challenge: EvaluatedChallenge;
-  isPro: boolean;
-  onLockPress: () => void;
-}) {
-  const isProLocked = challenge.isPro && !isPro;
+function ChallengeCard({ challenge }: { challenge: EvaluatedChallenge }) {
   const isLocked = !challenge.unlocked;
-  const dimmed = isProLocked || isLocked;
+  const dimmed = isLocked;
   const progress = Math.min(1, challenge.progress / challenge.target);
 
-  const card = (
+  return (
     <View
       style={[
         styles.card,
@@ -39,12 +30,7 @@ function ChallengeCard({
           <Text style={[styles.title, dimmed && styles.textDimmed]}>
             {challenge.title}
           </Text>
-          {isProLocked && (
-            <View style={styles.proBadge}>
-              <Text style={styles.proBadgeText}>PRO 🔒</Text>
-            </View>
-          )}
-          {isLocked && !isProLocked && (
+          {isLocked && (
             <Text style={styles.lockedText}>🔒</Text>
           )}
         </View>
@@ -54,7 +40,6 @@ function ChallengeCard({
         {challenge.description}
       </Text>
 
-      {/* Progress bar */}
       <View style={styles.progressRow}>
         <View style={styles.progressTrack}>
           <View
@@ -71,30 +56,15 @@ function ChallengeCard({
       </View>
     </View>
   );
-
-  if (isProLocked) {
-    return (
-      <TouchableOpacity onPress={onLockPress} activeOpacity={0.7}>
-        {card}
-      </TouchableOpacity>
-    );
-  }
-
-  return card;
 }
 
-export function ChallengesSection({ challenges, isPro, onLockPress }: Props) {
+export function ChallengesSection({ challenges }: Props) {
   return (
     <View style={styles.container}>
       <Text style={styles.header}>CHALLENGES</Text>
       <View style={styles.list}>
         {challenges.map((c) => (
-          <ChallengeCard
-            key={c.id}
-            challenge={c}
-            isPro={isPro}
-            onLockPress={onLockPress}
-          />
+          <ChallengeCard key={c.id} challenge={c} />
         ))}
       </View>
     </View>
@@ -147,18 +117,6 @@ const styles = StyleSheet.create({
     color: DS_COLORS.textPrimary,
     letterSpacing: 0.5,
     flexShrink: 1,
-  },
-  proBadge: {
-    backgroundColor: 'rgba(233, 69, 96, 0.15)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  proBadgeText: {
-    fontSize: 9,
-    fontFamily: FONTS.heading,
-    color: DS_COLORS.coral,
-    letterSpacing: 0.5,
   },
   lockedText: {
     fontSize: 12,

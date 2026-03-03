@@ -55,7 +55,7 @@ export const CHALLENGES: Challenge[] = [
   // ═══════════════════════════════════════════════════════════
   // PHASE 1 — FOUNDATIONS (Days 1-14)
   // Easy, 2-15 min. Establishing baseline habits.
-  // 8 of 14 require a D.A.W.G. session (Easy mode, 3-5 min).
+  // 8 of 14 require a DO NOTHIN session (Easy mode, 3-5 min).
   // ═══════════════════════════════════════════════════════════
 
   {
@@ -308,7 +308,7 @@ export const CHALLENGES: Challenge[] = [
   // ═══════════════════════════════════════════════════════════
   // PHASE 2 — BUILDING (Days 15-45)
   // Moderate, 15-60 min. Deepening the practice.
-  // 12 of 31 require a D.A.W.G. session (10-15 min, some Strict).
+  // 12 of 31 require a DO NOTHIN session (10-15 min, some Strict).
   // ═══════════════════════════════════════════════════════════
 
   {
@@ -854,7 +854,7 @@ export const CHALLENGES: Challenge[] = [
   // ═══════════════════════════════════════════════════════════
   // PHASE 3 — MASTERY (Days 46-90)
   // Hard, 30 min to full day. Deep rewiring.
-  // 10 of 45 require a D.A.W.G. session (15-20 min, some Ruthless).
+  // 10 of 45 require a DO NOTHIN session (15-20 min, some Ruthless).
   // ═══════════════════════════════════════════════════════════
 
   {
@@ -1140,7 +1140,7 @@ export const CHALLENGES: Challenge[] = [
     phase: 3,
     duration: '1 hour',
     difficulty: 3,
-    scienceBite: 'Altruistic behavior activates the ventral striatum\'s reward circuit more sustainably than any digital reward — the "helper\'s high" is neurochemically real.',
+    scienceBite: 'Helping others activates your brain\'s reward system in a deeper, more lasting way than any notification — the "helper\'s high" is real.',
     studyRef: 'Moll et al., 2006',
     requiresSession: false,
     sessionMinProtection: 'easy',
@@ -1415,7 +1415,7 @@ export const CHALLENGES: Challenge[] = [
     phase: 3,
     duration: '24 hours',
     difficulty: 5,
-    scienceBite: '24 hours without digital stimulation produces the largest measurable rebound in dopamine receptor availability — a full neurochemical reset.',
+    scienceBite: '24 hours without digital stimulation can help your brain recalibrate to find natural rewards more satisfying.',
     studyRef: 'Deng et al., 2022',
     requiresSession: true,
     sessionMinDuration: 1200,
@@ -1536,7 +1536,7 @@ export const CHALLENGES: Challenge[] = [
     phase: 3,
     duration: 'All day',
     difficulty: 5,
-    scienceBite: 'Simultaneous removal of all supranormal stimuli produces the fastest dopamine receptor recovery — your brain recalibrates to find natural rewards satisfying.',
+    scienceBite: 'Removing all digital stimulation at once can help your brain recalibrate — many people find natural rewards feel more satisfying afterward.',
     studyRef: 'Volkow et al., 2011',
     requiresSession: true,
     sessionMinDuration: 1200,
@@ -1610,7 +1610,7 @@ export const CHALLENGES: Challenge[] = [
     requiresSession: false,
     sessionMinProtection: 'easy',
     notificationTitle: 'Share what you\'ve learned',
-    notificationBody: 'Tell someone what 89 days without phone addiction taught you.',
+    notificationBody: 'Tell someone what 89 days without phone dependency taught you.',
     completionPrompt: 'Who did you talk to? What resonated with them most?',
     emoji: '👥',
   },

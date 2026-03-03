@@ -9,8 +9,6 @@ import {
   Dimensions,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import { COLORS as DS_COLORS, FONTS, RADIUS } from '../constants/designSystem';
 import { Session } from '../types';
 import { getSessions } from '../utils/storage';
@@ -91,24 +89,6 @@ const GRADE_BANDS = [
   { min: 50, max: 64,  color: 'rgba(243, 156, 18, 0.06)' },
   { min: 0,  max: 49,  color: 'rgba(231, 76, 60, 0.05)' },
 ];
-
-// ─── Locked overlay helper ────────────────────────────────────────────────────
-function LockedOverlay({ text, onPress }: { text: string; onPress: () => void }) {
-  return (
-    <TouchableOpacity
-      style={styles.lockedOverlay}
-      onPress={onPress}
-      activeOpacity={0.8}
-    >
-      <LinearGradient
-        colors={['transparent', 'rgba(13, 13, 18, 0.95)']}
-        style={StyleSheet.absoluteFill}
-      />
-      <Text style={styles.lockIcon}>🔒</Text>
-      <Text style={styles.lockedText}>{text}</Text>
-    </TouchableOpacity>
-  );
-}
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 interface StatsScreenProps {
@@ -237,8 +217,6 @@ export function StatsScreen({ onGoBack }: StatsScreenProps) {
     }
 
     const pointSpacing = chartInnerWidth / (chartSessions.length - 1);
-    // For free users, compute the x position where the blur should start (after 3rd point)
-    const blurStartX = isPro ? chartWidth : CHART_PADDING_LEFT + Math.min(2, chartSessions.length - 1) * pointSpacing + 10;
 
     return (
       <View style={[styles.chartContainer, { height: CHART_HEIGHT, width: chartWidth }]}>
@@ -347,27 +325,6 @@ export function StatsScreen({ onGoBack }: StatsScreenProps) {
             </Text>
           );
         })}
-
-        {/* FREE: Blur overlay after 3rd data point */}
-        {!isPro && chartSessions.length > 3 && (
-          <TouchableOpacity
-            style={[styles.chartBlurOverlay, { left: blurStartX, right: 0, top: 0, bottom: 0 }]}
-            onPress={openPaywall}
-            activeOpacity={0.9}
-          >
-            <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
-            <LinearGradient
-              colors={['transparent', 'rgba(13, 13, 18, 0.9)']}
-              style={StyleSheet.absoluteFill}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-            />
-            <View style={styles.chartLockContent}>
-              <Text style={styles.chartLockIcon}>🔒</Text>
-              <Text style={styles.chartLockText}>Unlock full history</Text>
-            </View>
-          </TouchableOpacity>
-        )}
       </View>
     );
   };
@@ -395,11 +352,6 @@ export function StatsScreen({ onGoBack }: StatsScreenProps) {
           </TouchableOpacity>
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>YOUR STATS</Text>
-            {isPro && (
-              <View style={styles.proBadge}>
-                <Text style={styles.proBadgeText}>PRO</Text>
-              </View>
-            )}
           </View>
           <View style={styles.streakBadge}>
             <Text style={styles.streakFlame}>🔥</Text>
@@ -426,26 +378,18 @@ export function StatsScreen({ onGoBack }: StatsScreenProps) {
             )}
           </View>
 
-          {/* Avg Score — PRO gated */}
-          {isPro ? (
-            <View style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>AVG 7D</Text>
-              {avg7d != null ? (
-                <>
-                  <Text style={[styles.summaryValue, { color: scoreColor(avg7d) }]}>{avg7d}</Text>
-                  <Text style={[styles.summaryGrade, { color: scoreColor(avg7d) }]}>{scoreGrade(avg7d)}</Text>
-                </>
-              ) : (
-                <Text style={styles.summaryEmpty}>—</Text>
-              )}
-            </View>
-          ) : (
-            <TouchableOpacity style={styles.summaryCard} onPress={openPaywall} activeOpacity={0.7}>
-              <Text style={styles.summaryLabel}>AVG 7D</Text>
-              <Text style={styles.summaryLockIcon}>🔒</Text>
-              <Text style={styles.summaryProText}>PRO</Text>
-            </TouchableOpacity>
-          )}
+          {/* Avg Score */}
+          <View style={styles.summaryCard}>
+            <Text style={styles.summaryLabel}>AVG 7D</Text>
+            {avg7d != null ? (
+              <>
+                <Text style={[styles.summaryValue, { color: scoreColor(avg7d) }]}>{avg7d}</Text>
+                <Text style={[styles.summaryGrade, { color: scoreColor(avg7d) }]}>{scoreGrade(avg7d)}</Text>
+              </>
+            ) : (
+              <Text style={styles.summaryEmpty}>—</Text>
+            )}
+          </View>
 
           {/* Total Sessions — always visible */}
           <View style={styles.summaryCard}>
@@ -475,19 +419,9 @@ export function StatsScreen({ onGoBack }: StatsScreenProps) {
                 </Text>
                 <Text style={styles.streakFlameIcon}>🔥</Text>
               </View>
-              {isPro ? (
-                <Text style={styles.streakBest}>
-                  Best: {streakData.longestStreak} {streakData.longestStreak === 1 ? 'day' : 'days'}
-                </Text>
-              ) : (
-                <TouchableOpacity onPress={openPaywall} activeOpacity={0.7} style={styles.streakLockedRow}>
-                  <Text style={styles.streakLockedIcon}>🔒</Text>
-                  <Text style={styles.streakLockedText}>Best streak</Text>
-                  <View style={styles.streakProPill}>
-                    <Text style={styles.streakProPillText}>PRO</Text>
-                  </View>
-                </TouchableOpacity>
-              )}
+              <Text style={styles.streakBest}>
+                Best: {streakData.longestStreak} {streakData.longestStreak === 1 ? 'day' : 'days'}
+              </Text>
             </View>
 
             {/* Last 7 days circles — always visible (retention hook) */}
@@ -519,97 +453,49 @@ export function StatsScreen({ onGoBack }: StatsScreenProps) {
             <Text style={styles.emptyText}>No sessions yet</Text>
           ) : (
             <View style={styles.historyList}>
-              {/* Visible rows: PRO = all 20, FREE = first 3 */}
-              {recentSessions.slice(0, isPro ? 20 : 3).map((sess, i) => (
+              {recentSessions.slice(0, 20).map((sess, i) => (
                 <SessionRow key={sess.id} session={sess} showBorder={i > 0} />
               ))}
-
-              {/* FREE: blurred teaser rows + unlock button */}
-              {!isPro && recentSessions.length > 3 && (
-                <>
-                  <View style={styles.historyBlurWrapper}>
-                    {recentSessions.slice(3, 6).map((sess, i) => (
-                      <SessionRow key={sess.id} session={sess} showBorder={true} />
-                    ))}
-                    <LockedOverlay text="See all sessions" onPress={openPaywall} />
-                  </View>
-                  <TouchableOpacity style={styles.unlockButton} onPress={openPaywall} activeOpacity={0.8}>
-                    <Text style={styles.unlockButtonText}>Unlock Pro</Text>
-                  </TouchableOpacity>
-                </>
-              )}
             </View>
           )}
         </View>
 
         {/* ─── 6. WEEK OVER WEEK ─────────────────────────────────────── */}
-        {isPro ? (
-          // PRO: full section, only if enough data
-          weekOverWeek && scoredSessions.length >= 7 ? (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>THIS WEEK vs LAST WEEK</Text>
-              <View style={styles.wowCard}>
-                <View style={styles.wowBarsRow}>
-                  <View style={styles.wowBarColumn}>
-                    <View style={styles.wowBarTrack}>
-                      <View
-                        style={[styles.wowBarFill, { height: `${weekOverWeek.lastAvg}%`, backgroundColor: scoreColor(weekOverWeek.lastAvg), opacity: 0.4 }]}
-                      />
-                    </View>
-                    <Text style={styles.wowBarValue}>{weekOverWeek.lastAvg}</Text>
-                    <Text style={styles.wowBarLabel}>Last wk</Text>
-                  </View>
-                  <View style={styles.wowBarColumn}>
-                    <View style={styles.wowBarTrack}>
-                      <View
-                        style={[styles.wowBarFill, { height: `${weekOverWeek.thisAvg}%`, backgroundColor: scoreColor(weekOverWeek.thisAvg) }]}
-                      />
-                    </View>
-                    <Text style={styles.wowBarValue}>{weekOverWeek.thisAvg}</Text>
-                    <Text style={styles.wowBarLabel}>This wk</Text>
-                  </View>
-                </View>
-                <View style={styles.wowChange}>
-                  <Text style={[styles.wowChangeText, { color: weekOverWeek.change >= 0 ? '#2ECC71' : '#E74C3C' }]}>
-                    {weekOverWeek.change >= 0 ? '↑' : '↓'} {Math.abs(weekOverWeek.change)}%
-                  </Text>
-                  <Text style={styles.wowChangeLabel}>
-                    {weekOverWeek.change >= 0 ? 'improvement' : 'decrease'}
-                  </Text>
-                </View>
-              </View>
-            </View>
-          ) : null
-        ) : (
-          // FREE: always show section, fully blurred
+        {weekOverWeek && scoredSessions.length >= 7 ? (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>THIS WEEK vs LAST WEEK</Text>
-            <View style={styles.wowCardLocked}>
-              {/* Placeholder bars (always rendered) */}
+            <View style={styles.wowCard}>
               <View style={styles.wowBarsRow}>
                 <View style={styles.wowBarColumn}>
                   <View style={styles.wowBarTrack}>
-                    <View style={[styles.wowBarFill, { height: '55%', backgroundColor: '#F39C12', opacity: 0.3 }]} />
+                    <View
+                      style={[styles.wowBarFill, { height: `${weekOverWeek.lastAvg}%`, backgroundColor: scoreColor(weekOverWeek.lastAvg), opacity: 0.4 }]}
+                    />
                   </View>
-                  <Text style={styles.wowBarValue}>—</Text>
+                  <Text style={styles.wowBarValue}>{weekOverWeek.lastAvg}</Text>
                   <Text style={styles.wowBarLabel}>Last wk</Text>
                 </View>
                 <View style={styles.wowBarColumn}>
                   <View style={styles.wowBarTrack}>
-                    <View style={[styles.wowBarFill, { height: '70%', backgroundColor: '#2980B9', opacity: 0.3 }]} />
+                    <View
+                      style={[styles.wowBarFill, { height: `${weekOverWeek.thisAvg}%`, backgroundColor: scoreColor(weekOverWeek.thisAvg) }]}
+                    />
                   </View>
-                  <Text style={styles.wowBarValue}>—</Text>
+                  <Text style={styles.wowBarValue}>{weekOverWeek.thisAvg}</Text>
                   <Text style={styles.wowBarLabel}>This wk</Text>
                 </View>
               </View>
               <View style={styles.wowChange}>
-                <Text style={[styles.wowChangeText, { color: DS_COLORS.textDisabled }]}>↑ —%</Text>
+                <Text style={[styles.wowChangeText, { color: weekOverWeek.change >= 0 ? '#2ECC71' : '#E74C3C' }]}>
+                  {weekOverWeek.change >= 0 ? '↑' : '↓'} {Math.abs(weekOverWeek.change)}%
+                </Text>
+                <Text style={styles.wowChangeLabel}>
+                  {weekOverWeek.change >= 0 ? 'improvement' : 'decrease'}
+                </Text>
               </View>
-              {/* Locked overlay */}
-              <LockedOverlay text="Unlock with Pro" onPress={openPaywall} />
             </View>
           </View>
-        )}
+        ) : null}
 
         <View style={{ height: 40 }} />
       </ScrollView>

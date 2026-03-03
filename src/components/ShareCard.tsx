@@ -105,7 +105,7 @@ export const ShareCard = forwardRef<ViewShot, ShareCardProps>(
         >
           {/* 1. TOP — Branding */}
           <View style={styles.topSection}>
-            <Text style={styles.brandName}>The D.A.W.G. App</Text>
+            <Text style={styles.brandName}>DO NOTHIN.</Text>
             <View style={styles.verifiedBadge}>
               <Text style={styles.verifiedDot}>●</Text>
               <Text style={styles.verifiedText}>CAMERA VERIFIED</Text>
@@ -153,13 +153,13 @@ export const ShareCard = forwardRef<ViewShot, ShareCardProps>(
           {/* 6. BOTTOM — Handle + tagline */}
           <View style={styles.bottomSection}>
             <View style={styles.divider} />
-            <Text style={styles.handle}>@TheDAWGApp</Text>
-            <Text style={styles.tagline}>the art of doing absolutely nothing</Text>
+            <Text style={styles.handle}>@DoNothinApp</Text>
+            <Text style={styles.tagline}>Own Your Attention</Text>
           </View>
 
           {/* FREE: subtle watermark */}
           {!isPro && (
-            <Text style={styles.watermark}>dawg.app</Text>
+            <Text style={styles.watermark}>donothin.app</Text>
           )}
         </LinearGradient>
       </ViewShot>

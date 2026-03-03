@@ -49,13 +49,13 @@ const INLINE_CARD_W = W - 32;
 // ─── All Milestones (Day 1 + original 6) ─────────────────
 
 const ALL_MS = [
-  { day: 1,  title: 'THE BEGINNING',     icon: '🚀', text: 'You started. Most people never do. Your brain is already noticing.' },
-  { day: 3,  title: 'WITHDRAWAL PHASE',  icon: '⚡', text: "This is why you feel restless without your phone. It's normal. It passes." },
-  { day: 7,  title: 'CORTISOL DROP',      icon: '📉', text: 'Your stress levels are physically dropping. The brain fog starts lifting here.' },
-  { day: 14, title: 'ATTENTION RESET',    icon: '🎯', text: 'Your ability to focus just got 10 years younger. Not a metaphor — real data.' },
-  { day: 30, title: 'NEURAL REWIRING',    icon: '🧠', text: 'Your brain is physically building new wiring. Like muscle after the gym.' },
-  { day: 60, title: 'RECEPTOR RECOVERY',  icon: '🔄', text: 'The part of your brain that craves the scroll is quieting down.' },
-  { day: 90, title: 'FULL REWIRE',        icon: '👑', text: "Your brain stops needing the fix. You're rewired." },
+  { day: 1,  title: 'THE BEGINNING',     icon: '🚀', text: 'You started. Most people never do. Every journey begins with one step.' },
+  { day: 3,  title: 'BUILDING MOMENTUM', icon: '⚡', text: "Feeling restless without your phone? That's normal. It gets easier from here." },
+  { day: 7,  title: 'FIRST WEEK DOWN',   icon: '📉', text: 'One full week of presence. Many people report feeling calmer and more focused by now.' },
+  { day: 14, title: 'ATTENTION RESET',   icon: '🎯', text: 'Two weeks in. Your ability to sit with yourself is strengthening every day.' },
+  { day: 30, title: 'NEW HABITS FORMING', icon: '🧠', text: "A month of practice. You're building a real skill — the ability to be present." },
+  { day: 60, title: 'DEEP PRACTICE',     icon: '🔄', text: 'Two months. The urge to reach for your phone is fading. Presence feels natural.' },
+  { day: 90, title: 'THE FINISH LINE',   icon: '👑', text: "90 days. You've proven you can own your attention. That's rare." },
 ];
 
 // ─── Segments ─────────────────────────────────────────────
@@ -446,14 +446,14 @@ export function RewireTimeline({ sessions, startDate, onCurrentDayYOffset }: Pro
                   activeOpacity={0.8}
                   onPress={() => {
                     if (todayChallenge.requiresSession) {
-                      // User navigates to start a session
+                      handleMarkComplete();
                     } else {
                       handleMarkComplete();
                     }
                   }}
                 >
                   <Text style={st.inlineActionT}>
-                    {todayChallenge.requiresSession ? 'START SESSION' : 'MARK COMPLETE'}
+                    {todayChallenge.requiresSession ? 'COMPLETE WITH SESSION' : 'MARK COMPLETE'}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -600,11 +600,6 @@ export function RewireTimeline({ sessions, startDate, onCurrentDayYOffset }: Pro
                     <Text style={st.pillT}>Day {ms.day}</Text>
                   </View>
                   <Text style={st.cardDesc}>{ms.text}</Text>
-                  {(done || isNext) && (
-                    <TouchableOpacity style={st.shareBtn} activeOpacity={0.7}>
-                      <Text style={st.shareT}>SHARE</Text>
-                    </TouchableOpacity>
-                  )}
                 </View>
               </>
             )}
@@ -637,10 +632,9 @@ export function RewireTimeline({ sessions, startDate, onCurrentDayYOffset }: Pro
               <View style={st.sheetDuration}><Text style={st.sheetDurationT}>{todayChallenge.duration}</Text></View>
               <Text style={st.sheetScience}>🧠 {todayChallenge.scienceBite}</Text>
               <TouchableOpacity style={st.sheetAction} activeOpacity={0.8} onPress={() => {
-                if (todayChallenge.requiresSession) setShowChallengeCard(false);
-                else handleMarkComplete();
+                handleMarkComplete();
               }}>
-                <Text style={st.sheetActionT}>{todayChallenge.requiresSession ? 'START SESSION' : 'MARK COMPLETE'}</Text>
+                <Text style={st.sheetActionT}>{todayChallenge.requiresSession ? 'COMPLETE WITH SESSION' : 'MARK COMPLETE'}</Text>
               </TouchableOpacity>
             </>
           ) : (
@@ -740,7 +734,7 @@ const st = StyleSheet.create({
 
   // ── Milestone card ──
   card: {
-    position: 'absolute', width: 220, zIndex: 20,
+    position: 'absolute', width: 220, zIndex: 50, elevation: 20,
     backgroundColor: 'rgba(18,18,30,0.97)', borderRadius: 16, padding: 18, gap: 10,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
     shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.5, shadowRadius: 20,
@@ -752,11 +746,6 @@ const st = StyleSheet.create({
   },
   pillT: { fontSize: 11, fontFamily: FONTS.bodyBold, color: C.coral },
   cardDesc: { fontSize: 13, fontFamily: FONTS.body, color: 'rgba(255,255,255,0.65)', lineHeight: 19 },
-  shareBtn: {
-    alignSelf: 'flex-start', backgroundColor: C.coral, borderRadius: 8,
-    paddingVertical: 8, paddingHorizontal: 18, marginTop: 2,
-  },
-  shareT: { fontSize: 11, fontFamily: FONTS.heading, color: '#fff', letterSpacing: 1 },
 
   // ── Inline challenge card ──
   inlineCard: {

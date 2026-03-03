@@ -9,10 +9,10 @@ interface Props {
 }
 
 const HINTS = [
-  '20 minutes a day rewires your attention in 4 days. That\'s it.',
-  'Each session strengthens the part of your brain that controls impulse and focus.',
-  'Brain fog lifts as your dopamine receptors recalibrate to natural reward levels.',
-  'Sitting with no stimulation is the hardest thing your brain can do — and the most effective.',
+  '20 minutes a day can meaningfully shift how you relate to your phone.',
+  'Each session is practice for the skill of sustained attention.',
+  'Many people report feeling clearer and more focused after consistent practice.',
+  'Sitting with no stimulation is one of the hardest things to do — and one of the most rewarding.',
   "You're training yourself to do what most people would rather take an electric shock than attempt.",
 ];
 
@@ -39,7 +39,7 @@ export function TodaysDose({ sessions }: Props) {
       ) : (
         <View>
           <Text style={styles.statusText}>No session yet today</Text>
-          <Text style={styles.waitingText}>Your brain is waiting</Text>
+          <Text style={styles.waitingText}>Your next session is waiting</Text>
         </View>
       )}
 

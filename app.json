@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "D.A.W.G.",
+    "name": "DO NOTHIN.",
     "slug": "raw-dawg-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -21,10 +21,10 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "UIRequiresFullScreen": true,
-        "NSCameraUsageDescription": "D.A.W.G. uses the camera with on-device face detection to verify you stay present and track stillness during focus sessions. No face data is stored or shared.",
-        "NSMicrophoneUsageDescription": "D.A.W.G. needs microphone access to record verification videos during focus sessions.",
-        "NSPhotoLibraryUsageDescription": "D.A.W.G. needs photo library access to save your session videos and share cards.",
-        "NSPhotoLibraryAddUsageDescription": "D.A.W.G. needs permission to save your session verification videos and selfie share cards to your photo library."
+        "NSCameraUsageDescription": "DO NOTHIN. uses the camera with on-device face detection to verify you stay present and track stillness during focus sessions. No face data is stored or shared.",
+        "NSMicrophoneUsageDescription": "DO NOTHIN. needs microphone access to record verification videos during focus sessions.",
+        "NSPhotoLibraryUsageDescription": "DO NOTHIN. needs photo library access to save your session videos and share cards.",
+        "NSPhotoLibraryAddUsageDescription": "DO NOTHIN. needs permission to save your session verification videos and selfie share cards to your photo library."
       }
     },
     "android": {

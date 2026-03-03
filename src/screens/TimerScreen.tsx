@@ -548,14 +548,14 @@ export function TimerScreen({
             {/* Stats Bar */}
             <View style={styles.statsBar}>
               <Text style={styles.sessionText}>
-                I DAWG'd for {formatTimeDisplay(isRogueMode ? timeRemaining : durationSeconds - timeRemaining)}
+                I did NOTHIN for {formatTimeDisplay(isRogueMode ? timeRemaining : durationSeconds - timeRemaining)}
               </Text>
               <View style={styles.statsRow}>
                 <Text style={styles.statsText}>🐕 {liveStats.stillness}% still</Text>
                 <Text style={styles.statsDivider}>•</Text>
                 <Text style={styles.statsText}>{liveStats.blinks} blinks</Text>
               </View>
-              <Text style={styles.handleText}>@TheDAWGApp</Text>
+              <Text style={styles.handleText}>@DoNothinApp</Text>
             </View>
 
             {/* Bottom Section - Controls */}

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS as DS_COLORS, FONTS, RADIUS } from '../../constants/designSystem';
 import type { Session } from '../../types';
 
@@ -57,9 +56,8 @@ export function SessionLog({ sessions, isPro, onLockPress }: Props) {
     .filter((s) => s.completed)
     .sort((a, b) => b.timestamp - a.timestamp);
 
-  const visibleCount = isPro ? 20 : 3;
+  const visibleCount = 20;
   const visible = sorted.slice(0, expanded ? visibleCount : 0);
-  const blurredCount = !isPro && sorted.length > 3 ? Math.min(3, sorted.length - 3) : 0;
 
   return (
     <View style={styles.container}>
@@ -77,35 +75,6 @@ export function SessionLog({ sessions, isPro, onLockPress }: Props) {
           {visible.map((s) => (
             <SessionRow key={s.id} session={s} />
           ))}
-
-          {/* Blurred teaser rows for free users */}
-          {!isPro && blurredCount > 0 && (
-            <View style={styles.blurWrap}>
-              {Array.from({ length: blurredCount }).map((_, i) => (
-                <View key={i} style={styles.blurRow}>
-                  <View style={styles.blurBar} />
-                  <View style={[styles.blurBar, { width: 40 }]} />
-                  <View style={[styles.blurBar, { width: 30 }]} />
-                </View>
-              ))}
-              <TouchableOpacity onPress={onLockPress} activeOpacity={0.8}>
-                <LinearGradient
-                  colors={['transparent', 'rgba(26, 26, 46, 0.95)']}
-                  style={StyleSheet.absoluteFill}
-                />
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {!isPro && sorted.length > 3 && (
-            <TouchableOpacity
-              style={styles.unlockButton}
-              onPress={onLockPress}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.unlockText}>See all sessions — Unlock Pro</Text>
-            </TouchableOpacity>
-          )}
         </View>
       )}
     </View>

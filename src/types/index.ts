@@ -9,7 +9,7 @@ export interface Session {
   stillnessPercent?: number;  // 0-100, from frame processor stillness tracking
   blinksCount?: number;       // total blinks detected during session
   // V3 scoring engine results (optional for backward compatibility)
-  dawgScore?: number;           // 0-100 composite score
+  dawgScore?: number;           // 0-100 composite DO NOTHIN score
   stillnessScore?: number;      // 0-100 sub-score
   blinkScore?: number;          // 0-100 sub-score
   durationScore?: number;       // 0-100 sub-score
@@ -31,9 +31,9 @@ export interface UserStats {
   avgStillnessPercent?: number;  // average stillness across all sessions
   totalBlinks?: number;          // total blinks across all sessions
   // V3 scoring engine aggregate stats
-  bestDawgScore?: number;          // highest DAWG Score ever
+  bestDawgScore?: number;          // highest score ever
   bestGrade?: string;              // grade of best session
-  avgDawgScore7d?: number;         // average DAWG Score from last 7 days
+  avgDawgScore7d?: number;         // average score from last 7 days
   totalScoredSessions?: number;    // count of sessions with scoring data
 }
 

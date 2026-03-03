@@ -421,7 +421,7 @@ export class ScoringEngine {
     console.log(`[SCORE-DUR] actual=${actualSeconds.toFixed(0)}s committed=${committedDurationSeconds ?? 'N/A'}s ratio=${completionRatio.toFixed(2)} raw=${rawDurationScore.toFixed(1)} final=${durationScore.toFixed(1)}`);
     // #endregion
 
-    // Composite DAWG Score
+    // Composite Score
     const comp = this.cfg.composite;
     const dawgScore = clamp(
       0,

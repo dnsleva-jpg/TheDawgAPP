@@ -1,4 +1,4 @@
-# Custom Fonts for The D.A.W.G. App
+# Custom Fonts for DO NOTHIN.
 
 ## Required Font Files
 

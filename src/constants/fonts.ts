@@ -1,5 +1,5 @@
 /**
- * The D.A.W.G. App - Custom Font Definitions
+ * DO NOTHIN. - Custom Font Definitions
  * 
  * Font Usage Guide:
  * - display: Bebas Neue - for app title, timer, big numbers only

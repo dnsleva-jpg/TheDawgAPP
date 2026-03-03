@@ -130,7 +130,7 @@ export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0
     try {
       const uri = await captureShareCard();
       if (uri && (await Sharing.isAvailableAsync())) {
-        await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: 'Share your DAWG Score' });
+        await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: 'Share your DO NOTHIN Score' });
       }
     } catch (error: any) {
       Alert.alert('Share Failed', error?.message ?? 'Could not share the card.');
@@ -186,7 +186,7 @@ export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0
   };
 
   const getCaption = () => {
-    return `I just DAWG'd ${selectedLocation} 🐕 @TheDAWGApp #dawg #dopaminedetox`;
+    return `I just did NOTHIN at ${selectedLocation} 🧘 @DoNothinApp #donothin #dopaminedetox`;
   };
 
   const [captionCopied, setCaptionCopied] = useState(false);
@@ -326,24 +326,24 @@ export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0
   // DID YOU KNOW? hints
   const DID_YOU_KNOW_HINTS = [
     "You just did what 67% of people would rather take an electric shock than attempt.",
-    "Every session like this strengthens the part of your brain that says 'no' to the scroll.",
+    "Every session like this strengthens your ability to say 'no' to the scroll.",
     "Your blink rate during that session tells us how deep your focus went. Screens make you forget to blink — stillness brings it back.",
-    "Heavy phone users have the same dopamine receptor changes as drug addicts. You're reversing that right now.",
+    "Research suggests heavy phone use can affect the same reward pathways targeted by addictive substances. You're choosing a different path.",
     "The average person picks up their phone 144 times a day. You just proved you don't have to.",
-    "Brain fog isn't permanent. It's your dopamine receptors recalibrating. Each session speeds that up.",
-    "4 days of doing this for 20 minutes measurably improves your attention. You're on your way.",
+    "Many people report that regular stillness practice helps clear mental fog. Each session builds on the last.",
+    "Studies show that 4 days of mindfulness practice can measurably improve attention. You're on your way.",
     "Your phone is engineered like a slot machine — random rewards that keep you pulling. You just stepped away from the machine.",
-    "The restlessness you felt? That's withdrawal. It means your brain is noticing the change. Good.",
-    "After 2 weeks of this, people's focus improved by the equivalent of 10 years of cognitive decline. Keep going.",
-    "Your prefrontal cortex — the part that controls decisions and willpower — just got a workout.",
+    "The restlessness you felt? That's your brain adjusting. It means something is shifting. Good.",
+    "In one study, people who reduced phone use for 2 weeks reported better focus, sleep, or mental well-being. Keep going.",
+    "Your prefrontal cortex — the part that controls decisions and willpower — benefits from practice like this.",
     "Screen time drops your blink rate by 60%. Sitting still brings it back. Your eyes are thanking you.",
-    "The brain fog you feel after scrolling? It's real. Your dopamine system is oversaturated. This is the reset.",
-    "91% of people who restricted their phone use for 2 weeks saw better focus, sleep, or mental health.",
+    "That foggy feeling after a long scroll session? It's real. Regular breaks help your brain recalibrate.",
+    "91% of people in one study who restricted phone use for 2 weeks reported improvements in focus, sleep, or well-being.",
     "You're not just sitting still. You're training your brain to find reward in reality instead of a screen.",
     "The first 3 days are the hardest. If you're here, you're already ahead of most people.",
-    "Your brain physically rewires based on what you repeatedly do. You just chose stillness over stimulation.",
-    "Dopamine from your phone comes cheap and fast. The kind you build from stillness lasts longer and feels deeper.",
-    "8 weeks of practice like this changes 8 measurable regions of your brain. You're not imagining the difference.",
+    "Your brain adapts based on what you repeatedly do. You just chose stillness over stimulation.",
+    "Quick dopamine hits from your phone come cheap and fast. The satisfaction you build from stillness lasts longer.",
+    "Research suggests regular mindfulness practice can positively affect multiple areas of the brain. You're not imagining the difference.",
     "The scroll trains your brain to need constant input. This trains it to be enough on its own.",
   ];
   const didYouKnowHint = useMemo(
@@ -424,7 +424,7 @@ export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0
               <Text style={styles.title}>SESSION COMPLETE</Text>
             </View>
 
-            {/* 2. Hero DAWG Score */}
+            {/* 2. Hero Score */}
             <View style={styles.heroContainer}>
               <View style={styles.heroScoreRow}>
                 <Text style={styles.heroScore}>{Math.round(scoringResults.dawgScore)}</Text>
@@ -661,7 +661,7 @@ export function ResultsScreen({ completedSeconds, videoUri, stillnessPercent = 0
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Where did you DAWG? 🐕</Text>
+            <Text style={styles.modalTitle}>Where did you DO NOTHIN? 🧘</Text>
             
             <ScrollView style={styles.locationsList} showsVerticalScrollIndicator={false}>
               {selectedLocation === 'custom' ? (
@@ -906,7 +906,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
 
-  // ─── 2. Hero DAWG Score ────────────────────────────────────────
+  // ─── 2. Hero Score ────────────────────────────────────────
   heroContainer: {
     alignItems: 'center',
     gap: 2,

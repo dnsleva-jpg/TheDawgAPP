@@ -1,2 +1,2 @@
-# TheDAWGApp
-DAWG life with The D.A.W.G. App
+# DO NOTHIN.
+Own Your Attention with DO NOTHIN.

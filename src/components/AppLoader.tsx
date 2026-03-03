@@ -34,7 +34,7 @@ export function AppLoader({ children }: AppLoaderProps) {
   if (!fontsLoaded) {
     return (
       <View style={styles.loadingContainer}>
-        <Text style={styles.loadingTitle}>D.A.W.G.</Text>
+        <Text style={styles.loadingTitle}>DO NOTHIN.</Text>
         <ActivityIndicator size="large" color={DS_COLORS.coral} style={styles.spinner} />
         <Text style={styles.loadingText}>Loading fonts...</Text>
       </View>

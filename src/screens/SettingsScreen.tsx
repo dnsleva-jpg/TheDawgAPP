@@ -36,12 +36,12 @@ function handleRateApp() {
 
 function handleShareApp() {
   Share.share({
-    message: `Check out D.A.W.G. — the art of doing absolutely nothing. Put your phone down and prove it. ${APP_STORE_URL}`,
+    message: `Check out DO NOTHIN. — Own Your Attention. Put your phone down and prove it. ${APP_STORE_URL}`,
   }).catch(() => {});
 }
 
 function handleContact() {
-  Linking.openURL(`mailto:${CONTACT_EMAIL}?subject=D.A.W.G.%20App%20Feedback`).catch(() => {
+  Linking.openURL(`mailto:${CONTACT_EMAIL}?subject=DO%20NOTHIN%20App%20Feedback`).catch(() => {
     Alert.alert('Error', 'Could not open email client.');
   });
 }
@@ -71,12 +71,6 @@ export function SettingsScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Text style={styles.header}>SETTINGS</Text>
 
-        {/* ─── Account ─────────────────────────────────────── */}
-        <Text style={styles.sectionTitle}>ACCOUNT</Text>
-        <View style={styles.section}>
-          <SettingsRow label="Sign In" onPress={handleSignIn} />
-        </View>
-
         {/* ─── App ─────────────────────────────────────────── */}
         <Text style={styles.sectionTitle}>APP</Text>
         <View style={styles.section}>
@@ -97,7 +91,7 @@ export function SettingsScreen() {
 
         {/* ─── Footer ──────────────────────────────────────── */}
         <View style={styles.footer}>
-          <Text style={styles.footerVersion}>D.A.W.G. v{APP_VERSION}</Text>
+          <Text style={styles.footerVersion}>DO NOTHIN. v{APP_VERSION}</Text>
           <Text style={styles.footerTagline}>{BRAND.tagline}</Text>
         </View>
       </ScrollView>

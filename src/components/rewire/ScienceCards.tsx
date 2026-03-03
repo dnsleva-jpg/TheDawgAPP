@@ -3,14 +3,14 @@ import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { COLORS as DS_COLORS, FONTS } from '../../constants/designSystem';
 
 const CARDS = [
-  'Your phone is designed like a slot machine. Same brain chemicals. Same addiction loop.',
+  'Your phone is designed like a slot machine. It targets the same reward pathways. Same loop.',
   "Most people would rather be electrocuted than sit alone with their thoughts. You're training yourself to do what most can't.",
-  'The average person picks up their phone 144 times a day. Each pickup is a hit of dopamine your brain is learning to depend on.',
-  'Heavy phone users have the same brain changes as drug addicts. Not similar. The same.',
-  '4 days of sitting still for 20 minutes improved attention by up to 10x on hard tasks.',
-  '8 weeks of stillness practice physically changes 8 regions of your brain. Your brain is not fixed — it rebuilds based on what you do.',
+  'The average person picks up their phone 144 times a day. Each pickup reinforces a habit loop your brain is learning to depend on.',
+  'Research suggests heavy phone use can affect the same reward pathways as addictive substances.',
+  'In one study, 4 days of sitting still for 20 minutes improved attention on difficult tasks.',
+  'Research suggests regular mindfulness practice can positively affect multiple areas of the brain. Your brain adapts based on what you do.',
   'When you scroll, your eyes literally forget to blink. Screen use drops blink rate by 60%. That\'s how deep the trance goes.',
-  '91% of people who cut phone use for 2 weeks improved their focus, sleep, or mental health. 91%.',
+  '91% of people in one study who cut phone use for 2 weeks reported improvements in focus, sleep, or well-being.',
 ];
 
 export function ScienceCards() {

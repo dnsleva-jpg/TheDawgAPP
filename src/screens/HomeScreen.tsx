@@ -72,7 +72,7 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
           {/* Gradient Title */}
           <MaskedView
             maskElement={
-              <Text style={styles.title} accessibilityRole="header">THE D.A.W.G. APP</Text>
+              <Text style={styles.title} accessibilityRole="header">DO NOTHIN.</Text>
             }
           >
             <LinearGradient
@@ -80,12 +80,12 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
               start={{ x: 0, y: 0 }}
               end={{ x: 0, y: 1 }}
             >
-              <Text style={[styles.title, { opacity: 0 }]}>THE D.A.W.G. APP</Text>
+              <Text style={[styles.title, { opacity: 0 }]}>DO NOTHIN.</Text>
             </LinearGradient>
           </MaskedView>
           
           <Text style={styles.subtitle} accessibilityRole="header">
-            The art of doing absolutely nothing
+            Own Your Attention
           </Text>
         </View>
 

@@ -1,7 +1,7 @@
 export const MOTIVATIONAL_MESSAGES = [
   "You're literally doing nothing. Perfect. 🧘",
-  "The art of doing absolutely nothing. 💯",
-  "DAWG'ing reality right now. 🔥",
+  "Own Your Attention. 💯",
+  "Doing NOTHIN right now. 🔥",
   "No phone. No distractions. Just vibes. ✨",
   "This is what peak performance looks like. 🏆",
   "Doing nothing has never looked so good. 😎",
@@ -14,10 +14,10 @@ export const MOTIVATIONAL_MESSAGES = [
 ];
 
 export const CAPTION_TEMPLATES = [
-  "Just DAWG'd {duration} of pure nothing at {location} 🔥",
+  "Just did NOTHIN for {duration} at {location} 🔥",
   "Successfully did absolutely nothing for {duration} at {location} 💯",
-  "{duration} of DAWG'ing reality at {location} ✨",
+  "{duration} of doing NOTHIN at {location} ✨",
   "No phone, no distractions - just {duration} of pure existence at {location} 🧘",
-  "That feeling when you DAWG {duration} straight at {location} 😎",
+  "That feeling when you do NOTHIN for {duration} straight at {location} 😎",
   "Committed to doing nothing for {duration} at {location}. Built different. 💪",
 ];
