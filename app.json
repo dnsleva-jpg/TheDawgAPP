@@ -1,0 +1,77 @@
+{
+  "expo": {
+    "name": "DO NOTHIN.",
+    "slug": "raw-dawg-app",
+    "scheme": "donothin",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.anonymous.raw-dawg-app",
+      "appleTeamId": "425659Z92Q",
+      "buildNumber": "1",
+      "deploymentTarget": "16.4",
+      "icon": "./assets/icon.png",
+      "entitlements": {
+        "com.apple.developer.applesignin": [
+          "Default"
+        ],
+        "com.apple.developer.family-controls": true
+      },
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIRequiresFullScreen": true,
+        "NSCameraUsageDescription": "DO NOTHIN. uses the camera with on-device face detection to verify you stay present and track stillness during focus sessions. No face data is stored or shared.",
+        "NSMicrophoneUsageDescription": "DO NOTHIN. needs microphone access to record verification videos during focus sessions.",
+        "NSPhotoLibraryUsageDescription": "DO NOTHIN. needs photo library access to save your session videos and share cards.",
+        "NSPhotoLibraryAddUsageDescription": "DO NOTHIN. needs permission to save your session verification videos and selfie share cards to your photo library.",
+        "NSFamilyControlsUsageDescription": "DO NOTHIN. uses Screen Time to help you manage which apps you want to pause before opening, giving you a moment to focus."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
+      "package": "com.anonymous.raw-dawg-app"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-apple-authentication",
+      "react-native-vision-camera",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "16.4"
+          }
+        }
+      ],
+      "expo-font",
+      [
+        "react-native-device-activity",
+        {
+          "appleTeamId": "425659Z92Q",
+          "appGroup": "group.com.anonymous.raw-dawg-app"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "dd562535-a197-4c5b-9e60-a52837794b7a"
+      }
+    }
+  }
+}

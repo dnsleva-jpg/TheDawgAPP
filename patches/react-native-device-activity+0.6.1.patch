@@ -1,0 +1,152 @@
+diff --git a/node_modules/react-native-device-activity/config-plugin/createExpoTargetConfig.js b/node_modules/react-native-device-activity/config-plugin/createExpoTargetConfig.js
+index cc5542b..d8f49c8 100644
+--- a/node_modules/react-native-device-activity/config-plugin/createExpoTargetConfig.js
++++ b/node_modules/react-native-device-activity/config-plugin/createExpoTargetConfig.js
+@@ -2,7 +2,7 @@ const getAppGroupFromExpoConfig = require("./getAppGroupFromExpoConfig");
+ 
+ /**
+  * Creates a configuration function for Apple target extensions
+- * @param {('shield-action' | 'shield-configuration' | 'device-activity-monitor')} targetType - The type of target extension
++ * @param {('shield-action' | 'shield-configuration' | 'device-activity-monitor' | 'device-activity-report')} targetType - The type of target extension
+  * @returns {import('@kingstinct/expo-apple-targets/build/config-plugin').ConfigFunction}
+  */
+ const createConfig = (targetType) => {
+diff --git a/node_modules/react-native-device-activity/expo-module.config.json b/node_modules/react-native-device-activity/expo-module.config.json
+index aadad61..a160842 100644
+--- a/node_modules/react-native-device-activity/expo-module.config.json
++++ b/node_modules/react-native-device-activity/expo-module.config.json
+@@ -1,6 +1,6 @@
+ {
+   "platforms": ["ios"],
+   "ios": {
+-    "modules": ["ReactNativeDeviceActivityModule", "ReactNativeDeviceActivityViewPersistedModule"]
++    "modules": ["ReactNativeDeviceActivityModule", "ReactNativeDeviceActivityViewPersistedModule", "ReactNativeDeviceActivityReportViewModule"]
+   }
+ }
+diff --git a/node_modules/react-native-device-activity/ios/ReactNativeDeviceActivityModule.swift b/node_modules/react-native-device-activity/ios/ReactNativeDeviceActivityModule.swift
+index 8aee1f2..7308d2f 100644
+--- a/node_modules/react-native-device-activity/ios/ReactNativeDeviceActivityModule.swift
++++ b/node_modules/react-native-device-activity/ios/ReactNativeDeviceActivityModule.swift
+@@ -943,3 +943,18 @@ public class ReactNativeDeviceActivityViewPersistedModule: Module {
+     }
+   }
+ }
++
++@available(iOS 16.0, *)
++public class ReactNativeDeviceActivityReportViewModule: Module {
++  public func definition() -> ExpoModulesCore.ModuleDefinition {
++    Name("ReactNativeDeviceActivityReportViewModule")
++    View(ReactNativeDeviceActivityReportView.self) {
++      Prop("contextName") { (view: ReactNativeDeviceActivityReportView, prop: String) in
++        view.setContextName(prop)
++      }
++      Prop("days") { (view: ReactNativeDeviceActivityReportView, prop: Int) in
++        view.setDays(prop)
++      }
++    }
++  }
++}
+diff --git a/node_modules/react-native-device-activity/ios/ReactNativeDeviceActivityReportView.swift b/node_modules/react-native-device-activity/ios/ReactNativeDeviceActivityReportView.swift
+new file mode 100644
+index 0000000..1056a03
+--- /dev/null
++++ b/node_modules/react-native-device-activity/ios/ReactNativeDeviceActivityReportView.swift
+@@ -0,0 +1,98 @@
++import DeviceActivity
++import ExpoModulesCore
++import FamilyControls
++import SwiftUI
++import UIKit
++
++// Wraps Apple's `DeviceActivityReport` SwiftUI view so it can be rendered
++// from React Native. Mounting the view causes iOS to launch the matching
++// DeviceActivityReport Extension (registered in the host app), which can then
++// aggregate Screen Time data and persist it to App Group UserDefaults.
++@available(iOS 16.0, *)
++class ReactNativeDeviceActivityReportView: ExpoView {
++
++  // The SwiftUI host. Recreated when contextName/days change so iOS reruns the extension.
++  private var contentView: UIHostingController<AnyView>!
++
++  // Configurable props
++  private var contextName: String = "Total Activity"
++  private var days: Int = 7
++
++  required init(appContext: AppContext? = nil) {
++    super.init(appContext: appContext)
++    backgroundColor = .clear
++    rebuildContent()
++  }
++
++  override func layoutSubviews() {
++    contentView.view.frame = bounds
++  }
++
++  override func didMoveToWindow() {
++    super.didMoveToWindow()
++    if window != nil {
++      if contentView.parent == nil, let parentVC = parentViewController {
++        parentVC.addChild(contentView)
++        contentView.didMove(toParent: parentVC)
++      }
++    } else if contentView.parent != nil {
++      contentView.willMove(toParent: nil)
++      contentView.removeFromParent()
++    }
++  }
++
++  private var parentViewController: UIViewController? {
++    var responder: UIResponder? = self
++    while let next = responder?.next {
++      if let vc = next as? UIViewController { return vc }
++      responder = next
++    }
++    return nil
++  }
++
++  // MARK: Props
++
++  func setContextName(_ name: String) {
++    if name != contextName {
++      contextName = name
++      rebuildContent()
++    }
++  }
++
++  func setDays(_ d: Int) {
++    if d != days {
++      days = d
++      rebuildContent()
++    }
++  }
++
++  private func rebuildContent() {
++    let calendar = Calendar.current
++    let now = Date()
++    let start =
++      calendar.date(byAdding: .day, value: -max(1, days), to: now) ?? now
++    let interval = DateInterval(start: start, end: now)
++
++    let filter = DeviceActivityFilter(
++      segment: .daily(during: interval),
++      users: .all,
++      devices: .init([.iPhone])
++    )
++
++    let context = DeviceActivityReport.Context(rawValue: contextName)
++    let view = AnyView(
++      DeviceActivityReport(context, filter: filter)
++        .frame(maxWidth: .infinity, maxHeight: .infinity)
++    )
++
++    if contentView == nil {
++      contentView = UIHostingController(rootView: view)
++      contentView.view.backgroundColor = .clear
++      contentView.view.isUserInteractionEnabled = false
++      addSubview(contentView.view)
++    } else {
++      contentView.rootView = view
++    }
++    setNeedsLayout()
++  }
++}
